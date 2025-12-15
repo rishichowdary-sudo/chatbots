@@ -1,0 +1,6 @@
+
+STATE_DB_PATH: "application_db/state_db"
+LOG_DB_PATH: "application_db/log_db"
+APP_LOG_PATH: "application_logs"
+APP_LOG_NAME: "academy_chatbotapp.log"
+  

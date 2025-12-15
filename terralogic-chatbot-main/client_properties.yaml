@@ -1,0 +1,15 @@
+# properties for terralogic
+terralogic:
+  ROOT_DIR: "Data"
+  CLIENT_NAME: "terralogic"
+  SYSTEM_PROMPTS_FILE: "system_prompts.ini"
+  PDF_FILE: "faq_data/Terralogic_FAQ_July24.pdf"
+  EMBEDDINGS_FILE: "faq_data/faq_embeddings.npz"
+  FAQ_JSON_FILE: "faq_data/faqs_from_pdf.json"
+  VECTOR_STORE_FILE: "vectorstore.db"
+  URL: "https://terralogic.com/"
+  CAREER_URL: "https://terralogic.com/careers/"
+  FAQ_SEARCH_THRESH: 0.85
+  GCP_BUCKET_NAME: "backupschatbot"
+  AKAMAI_BUCKET_NAME: "backupbuckets"
+

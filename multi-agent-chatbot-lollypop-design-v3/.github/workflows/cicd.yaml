@@ -1,0 +1,36 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-multi-agent-chatbot:
+    runs-on: chatbot-prod
+    timeout-minutes: 60
+
+    steps:
+      - name: Pull latest code from GitHub
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          git config --global --add safe.directory /home/github/projects/multi-agent-chatbot
+          cd /home/github/projects/multi-agent-chatbot
+          git remote set-url origin "https://x-access-token:${GH_PAT}@github.com/Terralogic-Solutions/multi-agent-chatbot.git"
+          git pull
+
+      - name: Clean up existing containers and images
+        working-directory: /home/github/projects/multi-agent-chatbot
+        run: docker compose down --remove-orphans
+
+      - name: Build and Start Backend
+        working-directory: /home/github/projects/multi-agent-chatbot
+        run: docker compose up --build -d multi-agent-chatbot
+
+      - name: Check status
+        run: |
+          for i in {1..5}; do
+            docker ps -a | grep multi-agent-chatbot 
+            sleep 3
+          done

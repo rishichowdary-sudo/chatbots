@@ -1,0 +1,14 @@
+# properties for lollypop_design
+lollypop_design:
+  ROOT_DIR: "Data"
+  CLIENT_NAME: "lollypop_design"
+  SYSTEM_PROMPTS_FILE: "system_prompts.ini"
+  PDF_FILE: "faq_data/Lollypop_Updated_FAQs_Jul24.pdf"
+  EMBEDDINGS_FILE: "faq_data/faq_embeddings.npz"
+  FAQ_JSON_FILE: "faq_data/faqs_from_pdf.json"
+  VECTOR_STORE_FILE: "vectorstore.db"
+  URL: "https://lollypop.design/"
+  CAREER_URL: "https://lollypop.design/careers/"
+  FAQ_SEARCH_THRESH: 0.85
+  GCP_BUCKET_NAME: "backupschatbot"
+  AKAMAI_BUCKET_NAME: "backupbuckets"

@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "client_id": "terralogic",
+    "session_id": "section-zdw07gq21",
+    "created_at": "2025-12-04T10:12:12.218817",
+    "date": "2025-12-04",
+    "time": "10:12:17",
+    "summary": false,
+    "updated_at": "2025-12-04T10:12:17.029616"
+  },
+  "conversation": {
+    "hi": {
+      "response": "<p>It seems like I didn't catch your name! Could you please share it with me?</p>",
+      "options": [],
+      "chatMessageOptions": [],
+      "jobs": []
+    }
+  }
+}

@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terralogic</title>
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.css">
+    <!-- Custom CSS -->
+    <style>
+        /* Reset Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            color: #333;
+            padding: 20px;
+        }
+
+        /* Header Styles */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        header img {
+            width: 40px;
+            height: 40px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            color: #dc33a9; /* Primary color */
+        }
+
+        .header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-buttons a, .header-buttons button {
+            padding: 8px 16px;
+            background-color: #8e38ff; /* Secondary color */
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-buttons a:hover, .header-buttons button:hover {
+            background-color: #7c2ad9; /* Darker shade of secondary color */
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+         th, td {
+            font-size: 14px;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eaeaea;
+            white-space: nowrap; /* ADD THIS LINE - Prevent text wrapping */
+        }
+
+        /* ===== NEW: Specific column widths for better control ===== */
+        th:nth-child(1), td:nth-child(1) { min-width: 30px; } /* ID */
+        th:nth-child(2), td:nth-child(2) { min-width: 100px; } /* Thread ID */
+        th:nth-child(3), td:nth-child(3) { min-width: 100px; } /* Name */
+        th:nth-child(4), td:nth-child(4) { min-width: 200px; } /* Email */
+        th:nth-child(5), td:nth-child(5) { min-width: 250px; white-space: normal; } /* Summary */
+        th:nth-child(6), td:nth-child(6) { min-width: 100px; } /* Category */
+        th:nth-child(7), td:nth-child(7) { min-width: 250px; white-space: normal; } /* Company Info */
+        th:nth-child(8), td:nth-child(8) { min-width: 150px; } /* Date & Time */
+        th:nth-child(9), td:nth-child(9) { min-width: 100px; } /* Email status */
+        th:nth-child(10), td:nth-child(10) { min-width: 150px; } /* Actions */
+
+
+        th {
+            background-color: #8e38ff; /* Secondary color */
+            color: #fff;
+        }
+
+        td {
+            background-color: #fff;
+        }
+
+        tr:nth-child(even) td {
+            background-color: #f9f9f9;
+        }
+
+        /* Button Styles */
+        button {
+            padding: 8px 16px;
+            background-color: #8e38ff; /* Secondary color */
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: #7c2ad9; /* Darker shade of secondary color */
+        }
+
+        button:focus {
+            outline: none;
+        }
+
+        /* Dialog Box Styles */
+        #dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+        }
+
+        #dialog-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 600px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        #dialog-content {
+            max-height: 400px;
+            overflow-y: scroll;
+            margin-bottom: 20px;
+        }
+
+        #dialog-content p {
+            margin: 10px 0;
+        }
+
+        .bot-message {
+            color: #0e0e0e; /* Secondary color for bot messages */
+        }
+
+        .user-message {
+            color: #111111; /* Primary color for user messages */
+        }
+
+        /* ===== SIMPLIFIED: Sticky scrollbar ===== */
+        .sticky-scroll-container {
+            position: fixed ;
+            bottom: 0 ;
+            left: 0 ;
+            right: 0 ;
+            width: 100% ;
+            height: 8px ;
+            background: rgba(255, 255, 255, 0.98) ;
+            border-top: 3px solid #d61e24 ;
+            z-index: 99999 ;
+            overflow-x: auto ;
+            overflow-y: hidden;
+            display: none;
+        }
+
+        .sticky-scroll-content {
+            height: 18px ;
+            background: transparent;
+            width: 100px; /* Default small width */
+        }
+
+        /* Enhanced scrollbar visibility */
+        .sticky-scroll-container::-webkit-scrollbar {
+            height: 18px ;
+        }
+
+        .sticky-scroll-container::-webkit-scrollbar-track {
+            background: #e0e0e0 ;
+        }
+
+        .sticky-scroll-container::-webkit-scrollbar-thumb {
+            background: #a9a9a9 ;
+            border-radius: 4px ;
+            min-width: 50px;
+        }
+
+        .sticky-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #a9a9a9 ;
+        }
+
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            table, th, td {
+                font-size: 14px;
+            }
+
+            button {
+                padding: 6px 12px;
+            }
+
+            #dialog-box {
+                width: 90%;
+            }
+
+            #dialog-content {
+                max-height: 300px;
+            }
+        }
+
+        /* Loading Animation Styles */
+        #loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            z-index: 9999;
+        }
+
+        /* Spinner Widget */
+        .spinner {
+            width: 80px;
+            height: 80px;
+            border: 8px solid #f3f3f3; /* Light gray background */
+            border-top: 8px solid #8e38ff; /* Secondary color for spinner's active part */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Custom DataTables Styles */
+        .dataTables_wrapper {
+            margin-top: 20px;
+        }
+
+        .dataTables_filter {
+            float: right;
+            margin-bottom: 10px;
+        }
+
+        .dataTables_filter input {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .dataTables_wrapper .top {
+            display: flex;
+            justify-content: space-between; /* left vs right */
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .dataTables_length {
+            display: inline-flex;
+            align-items: center;
+            gap: 15px; /* space between Show entries & Category */
+        }
+
+        .dataTables_filter {
+            margin: 0; /* prevent awkward spacing */
+        }
+
+        .dataTables_length select {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .dataTables_paginate {
+            margin-top: 10px;
+        }
+
+        .dataTables_paginate .paginate_button {
+            padding: 5px 10px;
+            margin: 0 2px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .dataTables_paginate .paginate_button.current {
+            background-color: #8e38ff; /* Secondary color */
+            color: #fff;
+            border-color: #8e38ff;
+        }
+
+        /* ===== NEW: Custom scrollbar styling ===== */
+        .table-wrapper::-webkit-scrollbar, 
+        .dataTables_scrollBody::-webkit-scrollbar {
+            height: 12px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-track, 
+        .dataTables_scrollBody::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 6px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb, 
+        .dataTables_scrollBody::-webkit-scrollbar-thumb {
+            background: #fd2e35;
+            border-radius: 6px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb:hover, 
+        .dataTables_scrollBody::-webkit-scrollbar-thumb:hover {
+            background: #d61e24;
+        }
+
+        /* ===== NEW: DataTables horizontal scroll styles ===== */
+        .dataTables_scrollX {
+            overflow-x: auto !important;
+        }
+
+        .dataTables_scroll {
+            overflow: auto;
+        }
+
+        .dataTables_scrollBody {
+            overflow-x: auto !important;
+        }
+             
+
+        
+        /* Also hide DataTables scrollbar */
+        .dataTables_scrollBody {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+
+        .dataTables_scrollBody::-webkit-scrollbar {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="https://terralogic.com/favicon.ico" alt="Terralogic Logo">
+            <h1>Terralogic</h1>
+        </div>
+        <div class="header-buttons">
+            <a href="/report/fetchdata/{{ client_id }}" onclick="fetchData()">Fetch</a>
+            <a href="/signup/{{ client_id }}" onclick="fetchData()">Add user</a>
+            <a href="/logout/{{ client_id }}" onclick="fetchData()">Logout</a>
+        </div>
+    </header>
+
+    <!-- Table with DataTables -->
+<div class="table-wrapper">
+    <table id="myTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Thread ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Summary</th>
+                <th>Category</th> 
+                <th>Company Information</th>
+                <th>Date & Time</th>
+                <th>Email Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{{ loop.index }}</td> <!-- Index -->
+                <td>{{ row[1] }}</td> <!-- Thread ID -->
+                <td>{{ row[3] }}</td> <!-- Name -->
+                <td>{{ row[4] }}</td> <!-- Email -->
+                <td>{{ row[7] }}</td> <!-- Summary -->
+                <td>{{ row[12]|replace('"','') }}</td> <!-- Category -->
+                <td>{{ row[8].replace('\n', '<br>').replace('\n', '<br>')|safe }}</td> <!--Company Information-->
+                
+                <td>{{ row[11] }} <br> {{ row[10] }}</td> <!-- Date and time-->
+                <td>{{ 'Sent' if row[13] == 1 else 'Not Sent' }}</td> <!-- Email Sent Status -->
+                <td>
+                    <button 
+                        title="View detailed conversation" 
+                        onclick='showConversation({{ row[0] }}, {{ row[10]|tojson }})'>
+                        View Conversation
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Dialog Box for Conversation -->
+    <div id="dialog-overlay">
+        <div id="dialog-box">
+            <div id="dialog-content"></div>
+            <button onclick="closeDialog()">Close</button>
+        </div>
+    </div>
+
+    <!-- Loading Screen with Spinner Widget -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- jQuery -->
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <!-- DataTables JS -->
+    <script type="text/javascript" src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+    <script>
+        let stickyScrollbar, tableWrapper, stickyScrollContent, table;
+        let isScrollSyncing = false;
+        // Initialize DataTables
+        $(document).ready(function() {
+            $('#myTable').DataTable({
+                paging: true, // Enable pagination
+                searching: true, // Enable search
+                ordering: true, // Enable sorting
+                pageLength: 5, // Set default number of rows per page
+                lengthMenu: [5, 10, 25, 50, 100], // Set row length options
+                order: [[0, 'desc']], // Default sorting by the first column (ID)
+                responsive: true, // Enable responsive design
+                scrollX: true,
+                dom: '<"top"l f>rt<"bottom"ip><"clear">',// Custom DOM layout
+                initComplete: function() {
+                    // 🔹 Add Category Filter beside "Show entries"
+                    var categoryHtml = `
+                        <label style="margin-left:15px;">
+                            Category:
+                            <select id="categoryFilter" class="form-control input-sm" style="margin-left:5px;">
+                                <option value="">All</option>
+                                {% for category in categories %}
+                                    <option value="{{ category }}" {% if category == selected_category %}selected{% endif %}>{{ category }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                    `;
+                    $(".dataTables_length").append(categoryHtml);
+
+                    // 🔹 Handle change (backend reload with ?category=)
+                    $('#categoryFilter').on('change', function() {
+                        const selected = $(this).val();
+                        const url = new URL(window.location.href);
+                        if (selected) {
+                            url.searchParams.set("category", selected);
+                        } else {
+                            url.searchParams.delete("category");
+                        }
+                        window.location.href = url.toString();
+                    });
+                     setTimeout(initializeStickyScrollbar, 500);
+                },
+                drawCallback: function() {
+                    setTimeout(updateStickyScrollbar, 200);
+                }
+            });
+
+    
+            // Check on window resize
+            window.addEventListener('resize', debounce(updateStickyScrollbar, 300));
+            window.addEventListener('scroll', debounce(toggleScrollbarVisibility, 100));
+        });
+
+        function initializeStickyScrollbar() {
+            stickyScrollbar = document.getElementById('sticky-scroll-container');
+            stickyScrollContent = document.getElementById('sticky-scroll-content');
+            
+            // Find the actual scrollable container
+            tableWrapper = document.querySelector('.dataTables_scrollBody');
+            if (!tableWrapper) {
+                tableWrapper = document.querySelector('.table-wrapper');
+            }
+            
+            table = document.getElementById('myTable');
+            
+            if (!tableWrapper || !stickyScrollbar || !stickyScrollContent || !table) {
+                console.log('Elements not ready, retrying...');
+                setTimeout(initializeStickyScrollbar, 500);
+                return;
+            }
+            
+            console.log('Found elements:', {
+                tableWrapper: !!tableWrapper,
+                stickyScrollbar: !!stickyScrollbar,
+                table: !!table
+            });
+            
+            setupScrollbarEvents();
+            updateStickyScrollbar();
+        }
+        
+        function setupScrollbarEvents() {
+            // Sticky scrollbar controls table
+            stickyScrollbar.addEventListener('scroll', function() {
+                if (!isScrollSyncing) {
+                    isScrollSyncing = true;
+                    tableWrapper.scrollLeft = this.scrollLeft;
+                    setTimeout(() => isScrollSyncing = false, 10);
+                }
+            });
+            
+            // Table scroll updates sticky scrollbar
+            tableWrapper.addEventListener('scroll', function() {
+                if (!isScrollSyncing) {
+                    isScrollSyncing = true;
+                    stickyScrollbar.scrollLeft = this.scrollLeft;
+                    setTimeout(() => isScrollSyncing = false, 10);
+                }
+            });
+        }
+        
+        function updateStickyScrollbar() {
+            if (!tableWrapper || !stickyScrollbar || !stickyScrollContent || !table) {
+                console.log('Elements missing for update');
+                return;
+            }
+            
+            const tableWidth = table.offsetWidth;
+            const containerWidth = tableWrapper.offsetWidth;
+            const overflow = tableWidth - containerWidth;
+            
+            console.log('Dimensions:', {
+                tableWidth: tableWidth,
+                containerWidth: containerWidth,
+                overflow: overflow
+            });
+            
+            // Show scrollbar if table is wider than container by at least 50px
+            if (overflow > 50) {
+                stickyScrollContent.style.width = tableWidth + 'px';
+                stickyScrollbar.style.display = 'block';
+                
+                // Sync scroll positions
+                stickyScrollbar.scrollLeft = tableWrapper.scrollLeft;
+                
+                toggleScrollbarVisibility();
+                
+                console.log('Sticky scrollbar shown');
+            } else {
+                stickyScrollbar.style.display = 'none';
+                console.log('Sticky scrollbar hidden - no overflow needed');
+            }
+        }
+        
+        function toggleScrollbarVisibility() {
+            if (!tableWrapper || !stickyScrollbar) return;
+            
+            const tableRect = tableWrapper.getBoundingClientRect();
+            const windowHeight = window.innerHeight;
+            
+            // Show when table is visible
+            const isTableVisible = tableRect.bottom > 0 && tableRect.top < windowHeight;
+            
+            if (isTableVisible) {
+                stickyScrollbar.style.opacity = '1';
+                stickyScrollbar.style.pointerEvents = 'auto';
+            } else {
+                stickyScrollbar.style.opacity = '0';
+                stickyScrollbar.style.pointerEvents = 'none'; // Keep it functional even when faded
+            }
+        }
+        
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Show conversation dialog
+        function showConversation(id, conversation) {
+            const dialogContent = document.getElementById("dialog-content");
+            dialogContent.innerHTML = ""; // Clear previous content
+
+            try {
+                const conversationData = JSON.parse(conversation);
+                conversationData.forEach(item => {
+                    const questionElement = document.createElement("p");
+                    questionElement.innerHTML = `<strong>Q:</strong> ${item.question}`;
+                    dialogContent.appendChild(questionElement);
+
+                    const answerElement = document.createElement("p");
+                    answerElement.innerHTML = `<strong>A:</strong> ${item.answer}`;
+                    answerElement.style.marginBottom = "10px";
+                    dialogContent.appendChild(answerElement);
+                });
+            } catch (error) {
+                dialogContent.textContent = "Failed to parse conversation. Please ensure the format is valid JSON.";
+            }
+
+            document.getElementById("dialog-overlay").style.display = "block";
+        }
+
+        // Close conversation dialog
+        function closeDialog() {
+            document.getElementById("dialog-overlay").style.display = "none";
+        }
+
+        // Show loading screen
+        function fetchData() {
+            document.getElementById("loading").style.display = "block";
+        }
+    </script>
+<!-- ===== Sticky horizontal scrollbar - Always at viewport bottom ===== -->
+<div id="sticky-scroll-container" class="sticky-scroll-container">
+        <div id="sticky-scroll-content" class="sticky-scroll-content"></div>
+</div>
+</body>
+</html>

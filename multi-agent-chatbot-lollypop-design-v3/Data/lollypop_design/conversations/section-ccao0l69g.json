@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "client_id": "lollypop_design",
+    "session_id": "section-ccao0l69g",
+    "created_at": "2025-12-04T05:50:08.515823",
+    "date": "2025-12-04",
+    "time": "05:50:08",
+    "summary": false,
+    "updated_at": "2025-12-04T05:50:08.515823"
+  },
+  "conversation": {
+    "vietnam": {
+      "response": "<p>Awesome choice, Rishi! 🌏 We have some exciting opportunities in Vietnam! Let me filter those for you. Just a moment! 😊</p>",
+      "options": [],
+      "chatMessageOptions": [],
+      "jobs": [
+        "<b><i>Title</i></b>: iOS Developer<br> <b><i>Location</i></b>: Bangalore, Chennai, Vietnam<br> <b><i>Apply here</i></b>: <a href='https://lollypop.design/careers/ios-developer/' target='_blank' rel='noopener noreferrer'>Apply</a>",
+        "<b><i>Title</i></b>: Lead Web Developer<br> <b><i>Location</i></b>: Bangalore, Vietnam<br> <b><i>Apply here</i></b>: <a href='https://lollypop.design/careers/lead-web-developer/' target='_blank' rel='noopener noreferrer'>Apply</a>",
+        "<b><i>Title</i></b>: Android Developer<br> <b><i>Location</i></b>: Bangalore, Chennai, Vietnam<br> <b><i>Apply here</i></b>: <a href='https://lollypop.design/careers/android-developer/' target='_blank' rel='noopener noreferrer'>Apply</a>"
+      ]
+    }
+  }
+}

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+        <title>Chatbot Implementation</title>
+        <style>
+            html {
+                height: -webkit-fill-available;
+                touch-action: manipulation;
+            }
+
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                min-height: -webkit-fill-available;
+                position: relative;
+                touch-action: manipulation;
+                -webkit-text-size-adjust: none;
+            }
+
+            #iframe-container {
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                z-index: 9999;
+                width: auto;
+                height: auto;
+            }
+
+            iframe {
+                width: 120px;
+                height: 120px;
+                border: none;
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                z-index: 9999;
+                border-radius: 10px;
+                display: none;
+                transform-origin: bottom right;
+                /* Prevents text size adjustment in the iframe */
+                -webkit-text-size-adjust: none;
+            }
+
+            @supports (-webkit-touch-callout: none) {
+                iframe {
+                    height: -webkit-fill-available;
+                }
+            }
+
+            /* iPhone Pro Max specific styles */
+            @media screen and (device-width: 430px) and (device-height: 932px),
+            screen and (device-width: 393px) and (device-height: 852px),
+            screen and (max-width: 430px) and (min-height: 852px) {
+                iframe.expanded {
+                    width: 100% !important;
+                    max-width: 430px !important;
+                    height: 100% !important;
+                    max-height: 100% !important;
+                    position: fixed;
+                    top: 0 !important;
+                    bottom: 0 !important;
+                    right: 0 !important;
+                    left: 0 !important;
+                    margin: auto !important;
+                    border-radius: 0 !important;
+                    padding-top: constant(safe-area-inset-top) !important;
+                    padding-top: env(safe-area-inset-top) !important;
+                    padding-bottom: constant(safe-area-inset-bottom) !important;
+                    padding-bottom: env(safe-area-inset-bottom) !important;
+                }
+
+                #iframe-container.expanded {
+                    width: 100%;
+                    height: 100%;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                }
+            }
+
+            /* General mobile styles */
+            @media screen and (max-width: 768px) {
+                body.no-scroll {
+                    overflow: hidden;
+                    position: fixed;
+                    width: 100%;
+                    height: 100%;
+                }
+
+                iframe.expanded {
+                    width: 100% !important;
+                    height: 100% !important;
+                    max-width: none !important;
+                    max-height: none !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    bottom: 0 !important;
+                    border-radius: 0 !important;
+                }
+            }
+        </style>
+    </head>
+
+<body>
+    <div id="iframe-container"></div>
+
+    <script>
+        const iframeContainer = document.getElementById("iframe-container");
+        const iframeSrc = "https://academychat.terralogic.com/lollypop_academy/";
+        let chatbotOpened = false;
+
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        const isProMaxSize = () => {
+            return (window.screen.width === 430 && window.screen.height === 932) ||
+                (window.screen.width === 393 && window.screen.height === 852) ||
+                (window.innerWidth <= 430 && window.innerHeight >= 852);
+        };
+
+        function forcePreventZoom() {
+            const metaViewport = document.querySelector('meta[name="viewport"]');
+            if (metaViewport) {
+                metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+            }
+
+            document.documentElement.style.zoom = 1;
+        }
+
+        async function checkIframeSrc(url) {
+            try {
+                const response = await fetch(url, { method: 'HEAD', mode: 'cors' });
+                return response.ok;
+            } catch (error) {
+                console.error('Error checking iframe source:', error);
+                return false;
+            }
+        }
+
+        function setupIframe() {
+            let iframe = document.getElementById("chatbot-iframe");
+
+            if (iframe) {
+                iframe.remove();
+            }
+
+            iframe = document.createElement("iframe");
+            iframe.id = "chatbot-iframe";
+            iframe.src = iframeSrc;
+            iframe.style.display = "none";
+            iframe.style.transition = "all 0.3s ease-in-out";
+
+            if (isIOS && isProMaxSize()) {
+                iframe.style.height = '-webkit-fill-available';
+            }
+
+            // Add a special query parameter to tell the iframe content to use large font sizes
+            if (isIOS) {
+                const separator = iframe.src.includes('?') ? '&' : '?';
+                iframe.src = `${iframe.src}${separator}preventzoom=true`;
+            }
+
+            iframe.onload = function () {
+                try {
+                    // Try to inject CSS to prevent zooming (for same-origin iframes)
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        html, body {
+                            touch-action: manipulation;
+                            -webkit-text-size-adjust: none;
+                        }
+                        input, textarea, select {
+                            font-size: 16px !important;
+                            max-height: 999999px;
+                        }
+                    `;
+                    iframeDoc.head.appendChild(style);
+
+                    // Add event listeners to prevent form submission
+                    iframe.contentWindow.addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        return false;
+                    });
+                } catch (error) {
+                    console.log('Cross-origin restrictions prevent direct form handling');
+                }
+            };
+
+            iframeContainer.appendChild(iframe);
+        }
+
+        function expandChatbot() {
+            const iframe = document.getElementById("chatbot-iframe");
+            if (!iframe) return;
+
+            iframe.style.transition = "none";
+            void iframe.offsetWidth;
+
+            if (isIOS && isProMaxSize()) {
+                iframe.classList.add('expanded');
+                iframeContainer.classList.add('expanded');
+                iframe.style.height = `${window.innerHeight}px`;
+            } else {
+                iframe.style.width = "100vw";
+                iframe.style.height = `${window.innerHeight}px`;
+                iframe.style.maxWidth = "490px";
+                iframe.style.maxHeight = "820px";
+                iframe.style.borderRadius = "10px";
+            }
+
+            iframe.style.display = "block";
+
+            if (window.innerWidth <= 768) {
+                document.body.classList.add("no-scroll");
+            }
+
+            chatbotOpened = true;
+
+            // Force layout recalculation for iOS
+            if (isIOS) {
+                setTimeout(() => {
+                    window.scrollTo(0, 0);
+                    forcePreventZoom();
+                }, 100);
+            }
+        }
+
+        function collapseChatbot() {
+            const iframe = document.getElementById("chatbot-iframe");
+            if (!iframe) return;
+
+            iframe.classList.remove('expanded');
+            iframeContainer.classList.remove('expanded');
+
+            iframe.style.width = "120px";
+            iframe.style.height = "120px";
+            iframe.style.borderRadius = "10px";
+            iframe.style.transition = "all 0.3s ease-in-out";
+            iframe.style.display = "block";
+
+            document.body.classList.remove("no-scroll");
+            chatbotOpened = false;
+        }
+
+        function adjustIframeForOrientation() {
+            if (chatbotOpened) {
+                const iframe = document.getElementById("chatbot-iframe");
+                if (!iframe) return;
+
+                if (isIOS && isProMaxSize()) {
+                    iframe.style.height = `${window.innerHeight}px`;
+                    setTimeout(() => {
+                        window.scrollTo(0, 0);
+                        forcePreventZoom();
+                    }, 100);
+                }
+            }
+        }
+
+        // Set up event listeners
+        window.addEventListener("resize", adjustIframeForOrientation);
+        window.addEventListener("orientationchange", adjustIframeForOrientation);
+
+        // Prevent pinch gestures that might zoom
+        document.addEventListener('touchmove', function (e) {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Prevent gesturestart/end/change events (iOS specific)
+        document.addEventListener('gesturestart', function (e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('gesturechange', function (e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('gestureend', function (e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        // Apply force prevent zoom every second (belt and suspenders approach)
+        if (isIOS) {
+            setInterval(forcePreventZoom, 1000);
+        }
+
+        checkIframeSrc(iframeSrc).then(isReachable => {
+            if (isReachable) {
+                setupIframe();
+
+                window.addEventListener("message", function (event) {
+                    const iframe = document.getElementById("chatbot-iframe");
+                    if (!iframe) return;
+
+                    switch (event.data.action) {
+                        case "expand":
+                            expandChatbot();
+                            break;
+
+                        case "collapse":
+                            collapseChatbot();
+                            break;
+
+                        case "expandToast":
+                            iframe.style.transition = "none";
+                            void iframe.offsetWidth;
+
+                            if (isIOS && isProMaxSize()) {
+                                iframe.style.width = "100%";
+                                iframe.style.maxWidth = "360px";
+                                iframe.style.height = "260px";
+                                iframe.style.maxHeight = "260px";
+                            } else {
+                                iframe.style.width = "100vw";
+                                iframe.style.maxWidth = "360px";
+                                iframe.style.height = "260px";
+                                iframe.style.maxHeight = "260px";
+                            }
+
+                            iframe.style.borderRadius = "10px";
+                            iframe.style.display = "block";
+                            break;
+
+                        case "collapseToast":
+                            collapseChatbot();
+                            break;
+
+                        case "preventZoom":
+                            forcePreventZoom();
+                            break;
+                    }
+                });
+            } else {
+                console.error("Iframe source is not reachable. The iframe will not be displayed.");
+            }
+        });
+
+        // Handle visibility changes - reapply zoom prevention
+        document.addEventListener("visibilitychange", function () {
+            if (document.visibilityState === "visible" && isIOS) {
+                forcePreventZoom();
+                if (chatbotOpened) {
+                    adjustIframeForOrientation();
+                }
+            }
+        });
+
+        // Initial orientation check and zoom prevention
+        adjustIframeForOrientation();
+        forcePreventZoom();
+    </script>
+</body>
+
+</html>

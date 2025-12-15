@@ -1,0 +1,32 @@
+
+# properties for lollypop_academy
+lollypop_academy:
+  ROOT_DIR: "Data"
+  CLIENT_NAME: "lollypop_academy"
+  SYSTEM_PROMPTS_FILE: "system_prompts.ini"
+  PDF_FILE: "faq_data/Lollypop_Academy_FAQs_Nov242024.pdf"
+  EMBEDDINGS_FILE: "faq_data/faq_embeddings.npz"
+  FAQ_JSON_FILE: "faq_data/faqs_from_pdf.json"
+  VECTOR_STORE_FILE: "vectorstore.db"
+  STATE_DB_FILE: "databases/state_db/lollypop_academy.db"
+  LOG_DB_FILE: "databases/log_db/Log.db"
+  URL: "https://lollypop.academy/"
+  FAQ_SEARCH_THRESH: 0.85
+  GCP_BUCKET_NAME: "backupschatbot"
+  AKAMAI_BUCKET_NAME: "backupbuckets"
+
+# properties for terralogic academy
+terralogic_academy:
+  ROOT_DIR: "Data"
+  CLIENT_NAME: "terralogic_academy"
+  SYSTEM_PROMPTS_FILE: "system_prompts.ini"
+  PDF_FILE: "faq_data/Terralogic_Academy_FAQs_Nov222024.pdf"
+  EMBEDDINGS_FILE: "faq_data/faq_embeddings.npz"
+  FAQ_JSON_FILE: "faq_data/faqs_from_pdf.json"
+  VECTOR_STORE_FILE: "vectorstore.db"
+  STATE_DB_FILE: "databases/state_db/terralogic_academy.db"
+  LOG_DB_FILE: "databases/log_db/Log.db"
+  URL: "https://terralogic.academy/"
+  FAQ_SEARCH_THRESH: 0.85
+  GCP_BUCKET_NAME: "backupschatbot"
+  AKAMAI_BUCKET_NAME: "backupbuckets"

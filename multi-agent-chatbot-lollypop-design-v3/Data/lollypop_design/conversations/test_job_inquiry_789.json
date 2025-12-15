@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "client_id": "lollypop_design",
+    "session_id": "test_job_inquiry_789",
+    "created_at": "2025-12-05T11:44:48.770578",
+    "date": "2025-12-05",
+    "time": "11:44:48",
+    "summary": false,
+    "updated_at": "2025-12-05T11:44:48.770578"
+  },
+  "conversation": {
+    "i'm looking for a job at your company": {
+      "response": "That's awesome to hear! I'd love to help you with that. But first, could you please share your name and email? This will help me assist you better! 😊",
+      "options": [],
+      "chatMessageOptions": [],
+      "jobs": []
+    }
+  }
+}

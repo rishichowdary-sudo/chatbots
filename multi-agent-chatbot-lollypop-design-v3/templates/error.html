@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oops! Something Went Wrong</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom right, #ff9a9e, #fad0c4);
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+            color: #444;
+        }
+
+        .container {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .lollipop {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            background: conic-gradient(#ff6f61, #ff9a76, #ffd1a9, #ff6f61);
+            border-radius: 50%;
+            animation: spin 5s infinite linear;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .lollipop-stick {
+            width: 20px;
+            height: 150px;
+            background: #fff;
+            margin-top: -10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: #fff;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        p {
+            font-size: 1.2rem;
+            margin: 15px 0;
+            color: #fff;
+            opacity: 0.9;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            background: #ff6f61;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: background 0.3s ease;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:hover {
+            background: #ff9a76;
+        }
+
+        .floating-lollipops {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .floating-lollipop {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: conic-gradient(#ff6f61, #ff9a76, #ffd1a9, #ff6f61);
+            border-radius: 50%;
+            animation: float 10s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100%);
+            }
+            50% {
+                transform: translateY(-30%);
+            }
+            100% {
+                transform: translateY(100%);
+            }
+        }
+
+        .floating-lollipop:nth-child(2) {
+            left: 20%;
+            animation-delay: 3s;
+        }
+
+        .floating-lollipop:nth-child(3) {
+            left: 40%;
+            animation-delay: 6s;
+        }
+
+        .floating-lollipop:nth-child(4) {
+            left: 60%;
+            animation-delay: 2s;
+        }
+
+        .floating-lollipop:nth-child(5) {
+            left: 80%;
+            animation-delay: 4s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="lollipop"></div>
+        <div class="lollipop-stick"></div>
+
+        <h1>Oops! Something Went Wrong</h1>
+        <p>{{error}}</p>
+        <a href="/login/{{ client_id }}" class="btn">Login Again</a>
+
+        <!-- Floating lollipops -->
+        <div class="floating-lollipops">
+            <div class="floating-lollipop"></div>
+            <div class="floating-lollipop"></div>
+            <div class="floating-lollipop"></div>
+            <div class="floating-lollipop"></div>
+            <div class="floating-lollipop"></div>
+        </div>
+    </div>
+</body>
+</html>

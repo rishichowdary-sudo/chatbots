@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Lollypop Design</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Global styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(to bottom right, #ff9a9e, #fad0c4);
+            color: #444;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header img {
+            width: 60px;
+            height: 60px;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            color: #ffffff;
+            margin-top: 10px;
+            text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Floating lollipops */
+        .floating-lollipops {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .floating-lollipop {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background: conic-gradient(#ff6f61, #ff9a76, #ffd1a9, #ff6f61);
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            animation: float 8s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100%);
+            }
+            50% {
+                transform: translateY(-30%);
+            }
+            100% {
+                transform: translateY(100%);
+            }
+        }
+
+        .floating-lollipop:nth-child(2) {
+            left: 20%;
+            animation-delay: 2s;
+        }
+
+        .floating-lollipop:nth-child(3) {
+            left: 40%;
+            animation-delay: 4s;
+        }
+
+        .floating-lollipop:nth-child(4) {
+            left: 60%;
+            animation-delay: 6s;
+        }
+
+        .floating-lollipop:nth-child(5) {
+            left: 80%;
+            animation-delay: 8s;
+        }
+
+        /* Form container */
+        .form-container {
+            width: 100%;
+            max-width: 400px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            animation: fadeIn 1.2s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-container h2 {
+            font-size: 1.8rem;
+            color: #ff6f61;
+            margin-bottom: 20px;
+        }
+
+        .form-container label {
+            display: block;
+            font-size: 1rem;
+            color: #444;
+            text-align: left;
+            margin-bottom: 8px;
+        }
+
+        .form-container input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .form-container button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(to right, #ff6f61, #ff9a76);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .form-container button:hover {
+            background: linear-gradient(to right, #ff9a76, #ffd1a9);
+        }
+
+        .form-container p {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 15px;
+        }
+
+        .form-container a {
+            color: #ff6f61;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .form-container a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="https://lollypop.design/wp-content/uploads/2023/01/Web-favicon.png" alt="Lollypop Logo">
+        <h1>Lollypop Design</h1>
+    </header>
+    <div class="floating-lollipops">
+        <div class="floating-lollipop"></div>
+        <div class="floating-lollipop"></div>
+        <div class="floating-lollipop"></div>
+        <div class="floating-lollipop"></div>
+        <div class="floating-lollipop"></div>
+    </div>
+
+    <div class="form-container">
+        <h2>Add new User</h2>
+        <form action="{{ url_for('report.signup', client_id=client_id) }}" method="POST">
+            <label for="user_name">Username</label>
+            <input type="text" id="user_name" name="user_name" required>
+    
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+    
+            <label for="confirm_password">Confirm Password</label>
+            <input type="password" id="confirm_password" name="confirm_password" required>
+    
+            <button type="submit">Submit</button>
+        </form>
+        <p>Already have an account? <a href="/login/{{ client_id }}">Login here</a></p>
+    </div>
+    
+</body>
+</html>

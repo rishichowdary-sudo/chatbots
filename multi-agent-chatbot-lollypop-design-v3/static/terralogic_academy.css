@@ -1,0 +1,974 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600&display=swap");
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+body {
+  background-color: rgba(252, 252, 252, 0);
+  --sb-track-color: #232E33;
+  --sb-thumb-color: #6BAF8D;
+  --sb-size: 14px;
+}
+
+body::-webkit-scrollbar {
+  width: var(--sb-size);
+}
+
+body::-webkit-scrollbar-track {
+  background: var(--sb-track-color);
+  border-radius: 3px;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb-color);
+  border-radius: 3px;
+}
+
+.glass-bg {
+  /* Glass effect */
+  background: rgba(228, 228, 228, 0.932);
+  box-shadow: 0 0px 15px 0 rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.669);
+  display: flex;
+  flex-direction: column;
+}
+
+/* uncomment this for the chatbox popup styling to collect user info */
+
+/* Popup inside chatbox style
+.chatbox-popup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 320px;
+  padding: 25px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  text-align: center;
+  animation: fadeIn 0.4s ease-in-out;
+  font-family: Arial, sans-serif;
+}
+
+.chatbox-popup h2 {
+  margin-bottom: 15px;
+  font-size: 20px;
+  color: #333;
+  font-weight: 600;
+}
+
+.chatbox-popup input {
+  width: 100%;
+  padding: 12px;
+  margin: 12px 0;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s;
+}
+
+.chatbox-popup input:focus {
+  border-color: #4caf50;
+  outline: none;
+  box-shadow: 0px 0px 4px rgba(76, 175, 80, 0.2);
+}
+
+.chatbox-popup button {
+  width: 100%;
+  padding: 12px;
+  background-color: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.chatbox-popup button:hover {
+  background-color: #3e8e41;
+  transform: scale(1.02);
+}
+
+.chatbox-popup button:active {
+  transform: scale(0.98);
+} */
+
+/* Fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -60%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+
+
+/* Toggle Button */
+.chatbot-toggle {
+  position: fixed;
+  right: 40px;
+  bottom: 35px;
+  height: 60px;
+  width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1B1BE6; /* Soft, accessible blue */
+  color: #fff;
+  font-size: 1.5rem;
+  border-radius: 50% 50% 0 50%;
+  border-color: transparent;
+  cursor: pointer;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.3s ease, transform 0.4s ease, box-shadow 0.3s ease;
+}
+
+.chatbot-toggle:hover {
+  background-color: #0C0C5A; /* Darken on hover */
+  box-shadow: 0px 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+/* Toggle Rotation Animation */
+.show-chatbot .chatbot-toggle {
+  transform: rotate(180deg);
+}
+
+/* Icon Styling */
+.chatbot-toggle span {
+  position: absolute;
+  font-weight: bold;
+}
+
+/* Hide elements based on chat visibility */
+.show-chatbot .chatbot-toggle span:first-child,
+.chatbot-toggle span:last-child {
+  opacity: 0;
+}
+
+.show-chatbot .chatbot-toggle span:last-child {
+  opacity: 1;
+}
+
+/* Chatbot Panel */
+.chatbot {
+  position: fixed;
+  right: 40px;
+  bottom: 100px;
+  width: 360px;
+  height: 705px;
+  padding: 5px;
+  background-color: #1b1be623;
+  color: #2d3748;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.2);
+  border-radius: 30px;
+  border-color: transparent;
+  overflow: hidden;
+  transform: scale(0.5);
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: bottom right;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.show-chatbot .chatbot {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Smooth Scaling Transition */
+.chatbot-toggle:hover .chatbot {
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+
+.chatbot header {
+  color: black;
+  display: flex;
+  gap: 16px;
+  position: relative;
+  align-items: left;
+  justify-content: space-between;
+  height: auto;
+}
+
+/* Apply animation to the avatar image */
+.chatbot header .avatar {
+  max-width: 50px;
+  position: relative;
+}
+
+.chatbot header .avatar img {
+  width: 120%;
+  height: 120%;
+  margin-left: 15px;
+  margin-bottom: 5px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.chatbot header .avatar.animate img {
+  animation: circularRevealBounce 1.3s ease-in-out forwards;
+}
+
+@keyframes circularRevealBounce {
+  0% {
+    clip-path: circle(0% at center);
+    opacity: 0;
+    transform: scale(0.8) rotate(0deg) translateX(-30px); /* Start slightly to the left */
+  }
+  60% {
+    clip-path: circle(70% at center);
+    opacity: 1;
+    transform: scale(1.3) rotate(25deg) translateX(20px); /* Move towards the right */
+  }
+  100% {
+    clip-path: circle(100% at center);
+    opacity: 1;
+    transform: scale(1) rotate(0deg) translateX(0); /* End in the original position */
+  }
+}
+
+
+.chatbot header h2 {
+  font-size: 1.2rem;
+  margin: 0 0 -12px 0;
+}
+.chatbot header span {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  cursor: pointer;
+  transform: translateY(-50%);
+  display: none;
+}
+.chatbot .header-body p {
+  font-size: 0.8rem;
+  position: relative;
+  margin: 0 0 -12px 0;
+}
+.chatbot .header-body p::before {
+  content: "•";
+  vertical-align: middle;
+  font-size: 2rem;
+  color: #16a34a;
+  padding-right: 5px;
+}
+
+.chatbot .chatbox {
+  height: 510px;
+  overflow-y: auto;
+  padding: 15px 20px 15px;
+  scrollbar-width: none;
+}
+
+
+/* Chatbox Container */
+.chatbox {
+  padding: 15px;
+  font-family: Arial, sans-serif;
+  background-color: #f9f9f900;
+  border-radius: 10px;
+  /* box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1); */
+  margin: 0 auto;
+}
+
+/* Chat Layout */
+.chatbox .chat {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+/* Center alignment for timestamp */
+.chatbox .center-time {
+  text-align: center;
+  font-size: 0.75rem;
+  margin-top: 2px;
+  margin-bottom: 5px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+  display: block;
+  color: #888;
+}
+
+/* Incoming message alignment */
+.chatbox .incoming-time {
+  text-align: left;
+  font-size: 0.55rem;
+  margin-top: 0; /* Remove top margin */
+  margin-bottom: 0; /* Remove bottom margin */
+  padding-top: 0; /* Remove top padding */
+  padding-bottom: 0; /* Remove bottom padding */
+  display: block; /* Align timestamp directly with the bubble */
+  color: #999;
+}
+
+/* Outgoing message alignment */
+.chatbox .outgoing-time {
+  text-align: right;
+  font-size: 0.55rem;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  display: block;
+  color: #999;
+}
+
+/* Avatar Styling for Incoming Messages */
+.chatbox .incoming span {
+  height: 40px;
+  width: 40px;
+  background-color: #f0f0f0;
+  border-radius: 50%;
+  display: inline-block;
+  border: 2px solid #866A9B;
+}
+
+/* Outgoing Messages */
+.chatbox .outgoing {
+  justify-content: flex-end;
+}
+
+/* Incoming Messages */
+.chatbox .incoming {
+  justify-content: flex-start;
+}
+
+/* Message Bubble Styles */
+.chatbox .chat p {
+  color: #333;
+  max-width: 70%;
+  white-space: pre-wrap;
+  padding: 12px 16px;
+  font-size: 0.80rem;
+  border-radius: 20px 20px 0 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(240, 240, 240, 0.9) 0%,
+    rgba(220, 220, 220, 0.9) 100%
+  );
+  border: 1px solid #e0e0e000;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.575);
+  animation: fadeInUp 0.4s ease forwards;
+  margin-bottom: 1px;
+}
+
+/* Outgoing Message Bubble */
+.chatbox .outgoing p {
+  background: linear-gradient(
+    135deg,
+    #1b1be6 0%,
+    #1b1be6 100%
+  );
+  color: #fff;
+  border-radius: 20px 20px 20px 0;
+}
+
+/* Incoming Message Bubble */
+.chatbox .incoming p {
+  background: #0C0C5A;
+  color: #ffffff;
+  border-radius: 20px 20px 20px 0;
+}
+
+/* Error Message Styling */
+.chatbox .chat p.error {
+  background: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+/* Fade In and Slide Up Animation */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Additional Hover and Focus Effects */
+/* .chatbox .chat p:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(240, 240, 240, 1) 0%,
+    rgba(225, 225, 225, 1) 100%
+  );
+  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.15);
+} */
+
+.chatbox .chat p:focus {
+  outline: 2px solid #d0d0d0;
+}
+
+/* Smooth Transition for Background and Border */
+.chatbox .chat p {
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+.typing-indicator {
+  display: inline-block;
+  position: relative; /* Position the dots */
+  height: 10px; /* Adjust height as needed */
+  width: 30px; /* Adjust width as needed */
+  margin: 0px; /* Add spacing around the indicator */
+}
+
+.typing-indicator .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #ffffff9a; /* Choose your dot color */
+  border-radius: 50%;
+  position: absolute;
+  bottom: 0; /* Position dots at the bottom */
+}
+
+.typing-indicator .dot:nth-child(1) {
+  left: 0;
+  animation: bounce 1s infinite;
+}
+
+.typing-indicator .dot:nth-child(2) {
+  left: 10px; /* Adjust spacing between dots */
+  animation: bounce 1s infinite 0.2s; /* Delay the second dot's animation */
+}
+
+.typing-indicator .dot:nth-child(3) {
+  left: 20px; /* Adjust spacing between dots */
+  animation: bounce 1s infinite 0.4s; /* Delay the third dot's animation */
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Tile Container: Flex-based Horizontal Scrolling */
+.tile-container {
+  display: flex;
+  flex-wrap: nowrap; /* Keeps tiles in a single row */
+  gap: 16px; /* Increased gap for better spacing */
+  justify-content: flex-start; /* Aligns tiles to the left */
+  padding: 16px;
+  overflow-x: auto; /* Enables horizontal scroll */
+  max-width: 100%;
+  border-radius: 12px; /* Soft rounded corners */
+  border: 2px solid rgba(41, 41, 41, 0.2); /* Light border for a modern look */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(41, 41, 41, 0.3) rgba(255, 255, 255, 0); /* Modern scrollbar colors */
+  scroll-snap-type: x proximity; /* Smooth scrolling for the tiles */
+  background: #fafafa; /* Light background to make tiles stand out */
+  animation: fadeInUp 0.5s ease-in-out;
+}
+  
+.tile-container::-webkit-scrollbar {
+  height: 8px; /* Custom scrollbar height */
+}
+  
+.tile-container::-webkit-scrollbar-thumb {
+  background-color: rgba(41, 41, 41, 0.3); /* Subtle scrollbar thumb */
+  border-radius: 10px;
+}
+  
+.tile-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0); /* Invisible track for a clean look */
+}
+  
+/* Individual Tile Design */
+.tile {
+  background: #fff;
+  padding: 20px; /* Increased padding for better content spacing */
+  margin: 10px 0;
+  border-radius: 15px; /* Soft, rounded corners */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Soft shadow for elevation */
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease; /* Smooth transitions */
+  cursor: pointer;
+  word-wrap: break-word;
+  min-width: 250px; /* Wider tiles for better readability */
+  flex-shrink: 0; /* Prevents tiles from shrinking */
+  background-color: #ffffff; /* Clean, white background */
+  border: 1px solid #ddd; /* Subtle border to define tile edges */
+  animation: fadeInUp 0.5s forwards;
+}
+  
+/* Hover Effect for Tiles */
+.tile:hover {
+  transform: translateY(-8px); /* Slight lift effect */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); /* Stronger shadow on hover */
+  background-color: #f9f9f9; /* Light background change */
+}
+  
+/* Title Styling within Each Tile */
+.tile-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333; /* Darker color for readability */
+  margin-bottom: 10px; /* More space below title */
+  text-transform: uppercase; /* Uppercase for modern look */
+}
+  
+/* Tile Information Styling */
+.tile-info {
+  font-size: 1rem;
+  color: #777; /* Softer color for less emphasis */
+  margin-bottom: 15px; /* Spacing for cleaner layout */
+}
+  
+/* Link Styling within Tiles */
+.tile-link {
+  display: inline-block;
+  background-color: #16a34a; /* A modern blue for links */
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 25px; /* Rounded link for modern aesthetic */
+  text-decoration: none;
+  font-weight: 600;
+  text-align: center;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  letter-spacing: 0.5px;
+}
+
+/* Hover Effect for Links */
+.tile-link:hover {
+  background-color: #087931; /* Darker shade on hover */
+  transform: scale(1.05); /* Slight zoom effect on hover */
+}
+
+/* Styling for the Show More button */
+.show-more-btn {
+  display: inline-block;
+  margin-top: 8px;
+  background: none;
+  border: none;
+  color: #007bff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+}
+
+.show-more-btn:hover {
+  text-decoration: underline;
+}
+
+
+/* Hide .chat-options by default */
+.chatbot .chat-options {
+  display: flex; /* Hide by default */
+  flex-wrap: nowrap;
+  max-width: 100%;
+  overflow-x: hidden;
+  margin-top: auto;
+  margin-bottom: 10px;
+  padding: 5px;
+  scrollbar-width: none;
+  position: relative;
+}
+
+.option-button {
+  padding: 8px 15px;
+  font-size: 0.80rem;
+  border: none;
+  background: #1b1be6;
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 15px;
+  cursor: pointer;
+  margin: 5px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.option-button:hover {
+  background: #0C0C5A;
+  transform: scale(1.1);
+  box-shadow: 2px 5px 5px rgba(0, 0, 0, 0.603);
+}
+
+.chat-options:hover {
+  animation-play-state: paused;
+}
+
+.chat-options.dragging {
+  cursor: grabbing; /* Changes cursor during dragging */
+  scroll-behavior: auto; /* Disables smooth scroll for instant response during drag */
+}
+
+
+
+.chatbot .chat-input {
+  position: relative;
+  left: 0;
+  right: 0;
+  margin: 14px 12px;
+  border-radius: 20px;
+  color: black;
+  background: rgb(224, 224, 224);
+  background: linear-gradient(
+    90deg,
+    rgba(248, 253, 254, 0.708) 0%,
+    rgba(255, 255, 255, 0.916) 35%
+  );
+  border: 1px solid white;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.062);
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: box-shadow 0.2s ease;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+.chat-input:hover {
+  box-shadow: 0 0 8px 0 rgba(132, 91, 255, 0.7);
+}
+
+/* Disable chat input when chatbox-popup is active */
+.chat-input.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+
+.chat-input textarea {
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  max-height: 300px;
+  font-size: 0.80rem;
+  height: 20px;
+  width: 100%;
+}
+
+.chat-input span {
+  font-size: 1.2rem;
+  height: 20px;
+  cursor: pointer;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.chat-input textarea:valid ~ span {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Large viewport - floating style */
+@media screen and (min-width: 412px), (min-height: 812px) {
+  .chatbot {
+    width: 380px;
+    height: 705px;
+    right: 40px;
+    bottom: 100px;
+  }
+
+  .chatbot .chatbox {
+    height: 510px;
+    padding: 15px 20px;
+  }
+
+  .chatbot-toggle {
+    right: 40px;
+    bottom: 35px;
+    height: 60px;
+    width: 60px;
+    font-size: 1.5rem;
+  }
+
+  .chatbox .chat p {
+    font-size: 0.80rem;
+    padding: 12px 16px;
+    max-width: 70%;
+  }
+
+  .option-button {
+    padding: 8px 15px;
+    font-size: 0.80rem;
+  }
+}
+
+/* Portrait mode media queries */
+@media screen and (max-width: 411px) and (orientation: portrait) {
+  .chatbot {
+    width: 100%;
+    height: 100vh;
+    max-height: 811px;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    border-radius: 0;
+  }
+
+  .chatbot-toggle {
+    visibility: visible;
+  }
+  
+  .show-chatbot .chatbot-toggle {
+    visibility: hidden;
+  }
+  
+  .chatbot header span {
+    display: block;
+  }
+
+  .chatbot .chatbox {
+    height: calc(100vh - 170px);
+    max-height: 691px;
+    padding: 12px 15px;
+  }
+
+  .chatbot-toggle {
+    right: 15px;
+    bottom: 25px;
+    height: 50px;
+    width: 50px;
+    font-size: 1.3rem;
+  }
+
+  .chatbox .chat p {
+    font-size: 0.75rem;
+    padding: 10px 14px;
+    max-width: 80%;
+  }
+
+  .option-button {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Landscape mode media queries */
+@media screen and (max-height: 411px) and (orientation: landscape) {
+  .chatbot {
+    width: 100%;
+    height: 100vh;
+    max-width: 811px;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    border-radius: 0;
+  }
+
+  .chatbot-toggle {
+    visibility: visible;
+  }
+  
+  .show-chatbot .chatbot-toggle {
+    visibility: hidden;
+  }
+  
+  .chatbot header span {
+    display: block;
+  }
+
+  .chatbot .chatbox {
+    height: calc(100vh - 170px); /* Reduced header/footer space for landscape */
+    padding: 8px 12px;
+  }
+
+  .chatbot-toggle {
+    right: 10px;
+    bottom: 10px;
+    height: 40px; /* Smaller toggle for landscape */
+    width: 40px;
+    font-size: 1.2rem;
+  }
+
+  .chatbox .chat p {
+    font-size: 0.75rem;
+    padding: 8px 12px;
+    max-width: 70%; /* Wider messages for landscape */
+  }
+
+  .option-button {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Small viewport - portrait */
+@media screen and (max-width: 360px) and (orientation: portrait) {
+  .chatbot {
+    width: 100%;
+    height: 100vh;
+  }
+
+  .chatbot .chatbox {
+    height: calc(100vh - 170px);
+    padding: 10px 12px;
+  }
+
+  .chatbox .incoming span {
+    height: 35px;
+    width: 35px;
+  }
+
+  .chat-options {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+  .option-button {
+    padding: 6px 10px;
+    font-size: 0.70rem;
+    margin: 4px;
+  }
+}
+
+/* Small viewport - landscape */
+@media screen and (max-height: 360px) and (orientation: landscape) {
+  .chatbot {
+    width: 100%;
+    height: 100vh;
+  }
+
+  .chatbot .chatbox {
+    height: calc(100vh - 170px);
+    padding: 8px 10px;
+  }
+
+  .chatbox .incoming span {
+    height: 30px;
+    width: 30px;
+  }
+
+  .chat-options {
+    margin-top: 6px;
+    margin-bottom: 6px;
+  }
+
+  .option-button {
+    padding: 4px 8px;
+    font-size: 0.70rem;
+    margin: 3px;
+  }
+}
+
+/* Height-based media queries for portrait */
+@media screen and (max-height: 811px) and (min-width: 412px) and (orientation: portrait) {
+  .chatbot {
+    height: calc(100vh - 80px); /* Account for toggle button and spacing */
+    bottom: 80px;
+  }
+
+  .chatbot .chatbox {
+    height: calc(100% - 155px); /* Account for header/footer elements */
+  }
+}
+
+/* Height-based media queries for landscape */
+@media screen and (max-height: 411px) and (orientation: landscape) {
+  .chatbot {
+    height: 100vh;
+  }
+
+  .chatbot .chatbox {
+    height: calc(100vh - 170px);
+  }
+}
+
+/* Combined height and width constraints - portrait */
+@media screen and (max-width: 360px) and (max-height: 700px) and (orientation: portrait) {
+  .chatbot {
+    height: 100vh;
+  }
+
+  .chatbot .chatbox {
+    height: calc(100vh - 170px);
+  }
+  
+  .chatbox .chat p {
+    font-size: 0.70rem;
+    padding: 8px 12px;
+    max-width: 85%;
+  }
+}
+
+/* Combined height and width constraints - landscape */
+@media screen and (max-height: 360px) and (max-width: 700px) and (orientation: landscape) {
+  .chatbot {
+    height: 100vh;
+  }
+
+  .chatbot .chatbox {
+    height: calc(100vh - 70px);
+  }
+  
+  .chatbox .chat p {
+    font-size: 0.70rem;
+    padding: 6px 10px;
+    max-width: 75%;
+  }
+}
+
+/* Very small viewport safeguard */
+@media screen and (max-width: 320px) {
+  .chatbot {
+    width: 100%;
+  }
+
+  .chatbot .chatbox {
+    padding: 8px 10px;
+  }
+
+  .chatbox .chat p {
+    padding: 8px 10px;
+  }
+}
+
+/* Input area for all orientations */
+.chat-input-area {
+  position: sticky;
+  bottom: 0;
+  background: inherit;
+}
+
+/* Landscape mode specific input area */
+@media screen and (orientation: landscape) {
+  .chat-input-area {
+    padding: 6px 8px;
+  }
+}
+
+/* Portrait mode specific input area */
+@media screen and (orientation: portrait) {
+  .chat-input-area {
+    padding: 10px;
+  }
+}
+
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+  .chatbot {
+    /* Prevent notch and home indicator issues */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .chat-input-area {
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+}

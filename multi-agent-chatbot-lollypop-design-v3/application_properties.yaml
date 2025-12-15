@@ -1,0 +1,4 @@
+STATE_DB_PATH: 'application_db/state_db'
+LOG_DB_PATH: 'application_db/log_db'
+REPORT_APP_DB_PATH: 'application_db/report_app_db'
+APPLICATION_LOG_PATH: 'application_logs'

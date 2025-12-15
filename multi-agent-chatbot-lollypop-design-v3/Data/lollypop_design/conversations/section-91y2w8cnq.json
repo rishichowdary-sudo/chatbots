@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "client_id": "lollypop_design",
+    "session_id": "section-91y2w8cnq",
+    "created_at": "2025-12-08T05:26:32.794405",
+    "date": "2025-12-08",
+    "time": "05:28:45",
+    "summary": false,
+    "updated_at": "2025-12-08T05:28:45.487664"
+  },
+  "conversation": {
+    "hi": {
+      "response": "Hello there! 🎉 I'm your friendly AI assistant from Lollypop Design, here to help you with all your creative needs! What's your name?",
+      "options": [],
+      "chatMessageOptions": [],
+      "jobs": []
+    },
+    "rishi, rishi.chowdary@terralogic.com": {
+      "response": "Thank you so much, Rishi! 🌟 I appreciate you sharing your details. Below are the available services we offer. Please choose one!",
+      "options": [],
+      "chatMessageOptions": [
+        "Start a project with us",
+        "Explore Lollypop",
+        "I'm looking for a job"
+      ],
+      "jobs": []
+    },
+    "explore lollypop": {
+      "response": "<div>I can assist you with information about Lollypop Design. Lollypop specializes in UI/UX design and development services, focusing on creating intuitive and visually appealing designs. We cater to various industries, including fintech, healthcare, e-commerce, and education, among others. For more details, please visit our <a href=\"https://lollypop.design/services/\" target=\"_blank\">services page</a>.</div>",
+      "options": [
+        "​ Where is Lollypop headquartered?",
+        "​ Who are Lollypop's clients?",
+        "​Can I see Lollypop’s case studies?",
+        "​ What agritech solutions has Lollypop designed?",
+        "​Does Lollypop offer research and strategy services?",
+        "​What industries does Lollypop specialize in?"
+      ],
+      "chatMessageOptions": [],
+      "jobs": []
+    },
+    "ok": {
+      "response": "<div>If you have any specific questions or if there's something else you'd like to explore about Lollypop Design, feel free to ask! I'm here to help. 😊</div>",
+      "options": [
+        "​ What challenges does Lollypop address in agritech?",
+        "​ 5. Do you manage social media accounts?",
+        "​ Do you have more branches?",
+        "​ Do you offer customized marketing strategies?",
+        "​Can I see Lollypop’s case studies?",
+        "​ Can Lollypop handle fintech compliance requirements?"
+      ],
+      "chatMessageOptions": [],
+      "jobs": []
+    }
+  }
+}

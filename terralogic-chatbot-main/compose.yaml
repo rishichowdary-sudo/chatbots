@@ -1,0 +1,15 @@
+services:
+  terralogic-chatbot:
+    build: ./
+    container_name: terralogic-chatbot
+    ports:
+      - "8002:8002"
+    volumes:
+      - database_volume:/terralogic-chatbot-app/application_db
+      - app_logs_volume:/terralogic-chatbot-app/application_logs
+    environment:
+      - FLASK_ENV=production
+    command: gunicorn --bind 0.0.0.0:8002 wsgi:app
+volumes:
+  database_volume:
+  app_logs_volume:

@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "client_id": "lollypop_design",
+    "session_id": "test_session_123",
+    "created_at": "2025-12-04T05:47:46.094367",
+    "date": "2025-12-04",
+    "time": "05:47:46",
+    "summary": false,
+    "updated_at": "2025-12-04T05:47:46.094367"
+  },
+  "conversation": {
+    "hello": {
+      "response": "Hi there! 🎉 I'm your friendly AI assistant from Lollypop Design, here to help you with all your creative needs! What's your name?",
+      "options": [],
+      "chatMessageOptions": [],
+      "jobs": []
+    }
+  }
+}

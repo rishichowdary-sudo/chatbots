@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "client_id": "lollypop_design",
+    "session_id": "section-e3ci4576w",
+    "created_at": "2025-12-05T04:20:56.679845",
+    "date": "2025-12-05",
+    "time": "04:33:55",
+    "summary": false,
+    "updated_at": "2025-12-05T04:33:55.144140"
+  },
+  "conversation": {
+    "hi": {
+      "response": "It seems like I didn't catch your name! 😊 Could you please share it with me?",
+      "options": [],
+      "chatMessageOptions": [],
+      "jobs": []
+    },
+    "rishi": {
+      "response": "Great to meet you, Rishi! 🎉 Now, could you please provide your email address? It will help me serve you better!",
+      "options": [],
+      "chatMessageOptions": [],
+      "jobs": []
+    },
+    "rishi1718.peram@gmail.com": {
+      "response": "Thank you so much for sharing your details, Rishi! 😊 Here are the available services we offer at Lollypop Design. Please choose one that interests you!",
+      "options": [],
+      "chatMessageOptions": [
+        "Start a project with us",
+        "Explore Lollypop",
+        "I'm looking for a job"
+      ],
+      "jobs": []
+    }
+  }
+}
