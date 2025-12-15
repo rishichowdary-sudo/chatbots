@@ -83,6 +83,48 @@ def _mask_key(key_value: str) -> str:
     return f"{key_value[:4]}{'*' * (len(key_value) - 6)}{key_value[-2:]}"
 
 
+def _convert_office_to_pdf_bytes(file_bytes: bytes, ext: str, logger=None) -> Optional[bytes]:
+    """
+    Convert DOC/DOCX bytes to a simple PDF (text-only) for upload.
+    Returns PDF bytes on success, or None on failure.
+    """
+    ext = ext.lower()
+    text_content = ""
+
+    if ext == ".docx":
+        doc = DocxDocument(io.BytesIO(file_bytes))
+        text_content = "\n\n".join(p.text for p in doc.paragraphs)
+    elif ext == ".doc":
+        try:
+            import textract
+
+            with tempfile.NamedTemporaryFile(suffix=".doc", delete=True) as tmp:
+                tmp.write(file_bytes)
+                tmp.flush()
+                extracted = textract.process(tmp.name)
+                text_content = extracted.decode("utf-8", errors="ignore")
+        except Exception:
+            return None
+    else:
+        return None
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_font("Arial", size=12)
+    page_width = pdf.w - 2 * pdf.l_margin
+    safe_text_content = text_content.encode("latin-1", "replace").decode("latin-1")
+    try:
+        pdf.multi_cell(page_width, 6, safe_text_content)
+    except Exception as exc:
+        if "Not enough horizontal space to render a single character" in str(exc):
+            _log(logger, "warning", "Skipping text content during PDF conversion due to width error")
+            return None
+        raise
+
+    return pdf.output()
+
+
 def _apply_env(provider_key: str, entry: Dict, logger=None):
     value = entry.get("key_value")
     if not value:
@@ -335,15 +377,18 @@ def register_admin_endpoints(app, client_configs, logger=None):
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.set_font("Arial", size=12)
-        for line in text_content.split("\n"):
-            safe_line = line.encode("latin-1", "replace").decode("latin-1")
-            try:
-                pdf.multi_cell(0, 8, safe_line)
-            except Exception as exc:
-                if "Not enough horizontal space to render a single character" in str(exc):
-                    _log(logger, "warning", "Skipping line during PDF conversion due to width error")
-                    continue
-                raise
+        page_width = pdf.w - 2 * pdf.l_margin # Calculate usable page width
+        
+        # Iterate over paragraphs (assuming paragraphs are separated by double newlines or similar)
+        # Or, just feed the entire text content as one block and let multi_cell handle wrapping
+        safe_text_content = text_content.encode("latin-1", "replace").decode("latin-1")
+        try:
+            pdf.multi_cell(page_width, 6, safe_text_content) # Use page_width and reduced line height
+        except Exception as exc:
+            if "Not enough horizontal space to render a single character" in str(exc):
+                _log(logger, "warning", "Skipping text content during PDF conversion due to width error")
+                return None
+            raise
 
         return pdf.output()
 

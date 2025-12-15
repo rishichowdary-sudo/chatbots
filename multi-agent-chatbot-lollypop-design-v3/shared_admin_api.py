@@ -335,15 +335,12 @@ def register_admin_endpoints(app, client_configs, logger=None):
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.set_font("Arial", size=12)
-        for line in text_content.split("\n"):
-            safe_line = line.encode("latin-1", "replace").decode("latin-1")
-            try:
-                pdf.multi_cell(0, 8, safe_line)
-            except Exception as exc:
-                if "Not enough horizontal space to render a single character" in str(exc):
-                    _log(logger, "warning", "Skipping line during PDF conversion due to width error")
-                    continue
-                raise
+        page_width = pdf.w - 2 * pdf.l_margin # Calculate usable page width
+        
+        # Iterate over paragraphs (assuming paragraphs are separated by double newlines or similar)
+        # Or, just feed the entire text content as one block and let multi_cell handle wrapping
+        safe_text_content = text_content.encode("latin-1", "replace").decode("latin-1")
+        pdf.multi_cell(page_width, 6, safe_text_content) # Use page_width and reduced line height
 
         return pdf.output()
 

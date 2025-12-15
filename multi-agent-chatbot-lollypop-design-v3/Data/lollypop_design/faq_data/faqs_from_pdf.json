@@ -1472,6 +1472,46 @@
         "answer": "It is purpose-built to reflect the company's branding and provide design-specific assistance. "
     },
     {
+        "question": "Q1. Who is Iron Man?",
+        "answer": "A1. Iron Man is Tony Stark, a genius inventor who uses advanced armor technology to fight evil. "
+    },
+    {
+        "question": "Q2. What powers does Thor have?",
+        "answer": "A2. Thor has god-like strength, control over lightning, and wields the hammer Mjolnir. "
+    },
+    {
+        "question": "Q3. Who is Captain America?",
+        "answer": "A3. Captain America is Steve Rogers, a super soldier known for his leadership and vibranium shield. "
+    },
+    {
+        "question": "Q4. What makes Spider-Man special?",
+        "answer": "A4. Spider-Man has super strength, agility, spider-sense, and the ability to cling to walls. "
+    },
+    {
+        "question": "Q5. Who is Hulk?",
+        "answer": "A5. Hulk is Bruce Banner, who transforms into a powerful green giant when he gets angry. "
+    },
+    {
+        "question": "Q6. Who is Black Panther?",
+        "answer": "A6. Black Panther is the king of Wakanda with enhanced abilities from the Heart-Shaped Herb. "
+    },
+    {
+        "question": "Q7. Who is Doctor Strange?",
+        "answer": "A7. Doctor Strange is a master of the mystic arts and protector of Earth from magical threats. "
+    },
+    {
+        "question": "Q8. What powers does Scarlet Witch have?",
+        "answer": "A8. Scarlet Witch can manipulate reality and use powerful chaos magic. "
+    },
+    {
+        "question": "Q9. Who is Thanos?",
+        "answer": "A9. Thanos is a powerful Titan who seeks balance in the universe using the Infinity Stones. "
+    },
+    {
+        "question": "Q10. Who are the Avengers?",
+        "answer": "A10. The Avengers are a team of Earth?s mightiest heroes who work together to protect the world. "
+    },
+    {
         "question": "Who is the best employee at Terralogic?",
         "answer": "Rishi "
     },
@@ -1550,6 +1590,10 @@
     {
         "question": "What is one fun fact about Rishi?",
         "answer": "He combines genius with a chill personality. "
+    },
+    {
+        "question": "Q1. Who is Iron Man?",
+        "answer": "Lollypop FAQs "
     },
     {
         "question": "\u200b What does Lollypop Design Studio do?",
