@@ -16,6 +16,12 @@ from typing import Dict, List, Optional
 
 from flask import jsonify, request
 
+import io
+import os
+import tempfile
+from docx import Document as DocxDocument
+from fpdf import FPDF
+
 API_PROVIDER_ENV_MAP = {
     "openai": "OPENAI_API_KEY",
     "azure_openai": "AZURE_OPENAI_API_KEY",
@@ -300,6 +306,47 @@ def register_admin_endpoints(app, client_configs, logger=None):
     def log_error(message: str):
         _log(logger, "exception", message)
 
+    def _convert_office_to_pdf_bytes(file_bytes: bytes, ext: str) -> Optional[bytes]:
+        """
+        Convert DOC/DOCX bytes to a simple PDF (text-only) for upload.
+        Returns PDF bytes on success, or None on failure.
+        """
+        ext = ext.lower()
+        text_content = ""
+
+        if ext == ".docx":
+            doc = DocxDocument(io.BytesIO(file_bytes))
+            text_content = "\n\n".join(p.text for p in doc.paragraphs)
+        elif ext == ".doc":
+            try:
+                import textract
+
+                with tempfile.NamedTemporaryFile(suffix=".doc", delete=True) as tmp:
+                    tmp.write(file_bytes)
+                    tmp.flush()
+                    extracted = textract.process(tmp.name)
+                    text_content = extracted.decode("utf-8", errors="ignore")
+            except Exception:
+                return None
+        else:
+            return None
+
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.set_font("Arial", size=12)
+        for line in text_content.split("\n"):
+            safe_line = line.encode("latin-1", "replace").decode("latin-1")
+            try:
+                pdf.multi_cell(0, 8, safe_line)
+            except Exception as exc:
+                if "Not enough horizontal space to render a single character" in str(exc):
+                    _log(logger, "warning", "Skipping line during PDF conversion due to width error")
+                    continue
+                raise
+
+        return pdf.output()
+
     def _validate_client(client_id: str):
         if not client_id or client_id not in client_configs:
             raise ValueError(f"Invalid client_id: {client_id}")
@@ -315,19 +362,42 @@ def register_admin_endpoints(app, client_configs, logger=None):
                 return jsonify({"error": "No file provided"}), 400
 
             upload = request.files["file"]
-            if not upload.filename or not upload.filename.lower().endswith(".pdf"):
-                return jsonify({"error": "Only PDF files are allowed"}), 400
+            if not upload.filename:
+                return jsonify({"error": "No file name provided"}), 400
+
+            filename_lower = upload.filename.lower()
+            _, ext = os.path.splitext(filename_lower)
+
+            # Accept PDF, DOC, DOCX
+            if ext not in [".pdf", ".doc", ".docx"]:
+                return jsonify({"error": "Only PDF, DOC, or DOCX files are allowed"}), 400
 
             root_dir = _client_root(config, client_id)
             upload_dir = os.path.join(root_dir, client_id, "uploads")
             os.makedirs(upload_dir, exist_ok=True)
 
             file_id = str(uuid.uuid4())
-            filename = f"{file_id}_{upload.filename}"
-            filepath = os.path.join(upload_dir, filename)
-            upload.save(filepath)
 
-            log_info(f"File uploaded for {client_id}: {filename}")
+            if ext in [".doc", ".docx"]:
+                # Convert to PDF before saving
+                file_bytes = upload.read()
+                pdf_bytes = _convert_office_to_pdf_bytes(file_bytes, ext)
+                if pdf_bytes is None:
+                    return jsonify({"error": "DOC/DOCX conversion failed; please upload a PDF"}), 400
+
+                pdf_name = f"{file_id}_{os.path.splitext(upload.filename)[0]}.pdf"
+                filepath = os.path.join(upload_dir, pdf_name)
+                with open(filepath, "wb") as f:
+                    f.write(pdf_bytes)
+
+                saved_filename = pdf_name
+            else:
+                # Already PDF – save as-is
+                saved_filename = f"{file_id}_{upload.filename}"
+                filepath = os.path.join(upload_dir, saved_filename)
+                upload.save(filepath)
+
+            log_info(f"File uploaded for {client_id}: {saved_filename}")
             return (
                 jsonify(
                     {
