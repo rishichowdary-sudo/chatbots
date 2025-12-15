@@ -75,6 +75,42 @@ def _save_key_store(path: str, data: Dict[str, Dict]) -> None:
     os.replace(tmp_path, path)
 
 
+def _save_indexing_history(client_id: str, indexing_mode: str, urls: str = None, sitemap: str = None, status: str = "unknown") -> None:
+    try:
+        # Get the client's data directory
+        config = client_configs.get(client_id, {})
+        root_dir = _client_root(config, client_id)
+        history_file = os.path.join(root_dir, client_id, "indexing_history.json")
+
+        # Load existing history
+        if os.path.exists(history_file):
+            with open(history_file, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+        else:
+            history = []
+
+        # Add new entry
+        history_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "indexing_mode": indexing_mode,
+            "status": status
+        }
+
+        if urls:
+            history_entry["urls"] = urls
+        if sitemap:
+            history_entry["sitemap"] = sitemap
+
+        history.append(history_entry)
+
+        # Save back to file (keep last 100 entries)
+        with open(history_file, 'w', encoding='utf-8') as f:
+            json.dump(history[-100:], f, indent=2)
+
+    except Exception as exc:
+        print(f"[ERROR] Error saving indexing history for {client_id}: {exc}")
+
+
 def _mask_key(key_value: str) -> str:
     if not key_value:
         return ""
@@ -604,6 +640,7 @@ def register_admin_endpoints(app, client_configs, logger=None):
                             }
                         )
                         log_info(f"{indexing_mode} indexing completed for {client_id}: {job_id}")
+                        _save_indexing_history(client_id, indexing_mode_detail, urls, sitemap, "completed")
                     else:
                         raise RuntimeError(result.stderr or "Unknown error")
                 except Exception as exc_inner:
@@ -611,9 +648,13 @@ def register_admin_endpoints(app, client_configs, logger=None):
                         {"status": "failed", "message": f"Indexing failed: {exc_inner}", "progress": 100}
                     )
                     log_error(f"Indexing error for {client_id}: {exc_inner}")
+                    _save_indexing_history(client_id, indexing_mode_detail, urls, sitemap, "failed")
 
             threading.Thread(target=run_indexing, daemon=True).start()
             log_info(f"{indexing_mode} indexing started for {client_id}: {job_id}")
+
+            # Save initial history entry
+            _save_indexing_history(client_id, indexing_mode_detail, urls, sitemap, "started")
 
             return jsonify({"message": "Indexing job started", "job_id": job_id, "status": "processing"}), 202
         except ValueError as exc:
@@ -631,6 +672,28 @@ def register_admin_endpoints(app, client_configs, logger=None):
             return jsonify({"job_id": job_id, **jobs[job_id]}), 200
         except Exception as exc:
             log_error(f"Error checking indexing status: {exc}")
+            return jsonify({"error": str(exc)}), 500
+
+    @app.route("/api/indexing/history", methods=["GET"])
+    def get_indexing_history():
+        try:
+            client_id = request.args.get("client_id")
+            config = _validate_client(client_id)
+            root_dir = _client_root(config, client_id)
+
+            # Read history file
+            history_file = os.path.join(root_dir, client_id, "indexing_history.json")
+            if os.path.exists(history_file):
+                with open(history_file, 'r', encoding='utf-8') as f:
+                    history = json.load(f)
+            else:
+                history = []
+
+            # Return most recent 20 entries
+            return jsonify({"history": history[-20:]}), 200
+
+        except Exception as exc:
+            log_error(f"Error retrieving indexing history: {exc}")
             return jsonify({"error": str(exc)}), 500
 
     @app.route("/api/keys", methods=["GET"])
