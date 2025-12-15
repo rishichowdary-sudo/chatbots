@@ -471,52 +471,77 @@ def register_admin_endpoints(app, client_configs, logger=None):
 
     @app.route("/api/indexing/start", methods=["POST"])
     def start_indexing():
+        """
+        Start indexing job for a client (PDF / website / sitemap / URLs).
+        Mirrors the behavior documented in Admin Portal.
+        """
         try:
             data = request.json or {}
             client_id = data.get("client_id")
-            index_type = data.get("index_type", "all")  # 'pdf', 'website', or 'all'
+            index_type = data.get("index_type", "all")
+            urls = data.get("urls")
+            sitemap = data.get("sitemap")
+
+            log_info(f"[DEBUG] Received indexing request: client_id={client_id}, index_type={index_type}, urls={urls}, sitemap={sitemap}")
             _validate_client(client_id)
 
             import subprocess
             import sys
             import threading
 
-            # Map index_type to index_website flag
-            index_website = index_type == "website"
-
             job_id = str(uuid.uuid4())
             app.indexing_jobs = getattr(app, "indexing_jobs", {})
 
-            # Set appropriate message based on indexing type
-            type_labels = {
-                "pdf": "PDF",
-                "website": "Website",
-                "all": "Full"
-            }
-            indexing_type = type_labels.get(index_type, "Full")
+            if index_type == "sitemap" and sitemap:
+                indexing_mode = f"Sitemap ({sitemap})"
+                indexing_mode_detail = f"Sitemap mode: {sitemap}"
+            elif index_type == "website" and urls:
+                indexing_mode = "Specific URLs"
+                indexing_mode_detail = f"URL mode: {urls}"
+            elif index_type == "website":
+                indexing_mode = "Full Website"
+                indexing_mode_detail = "Full website mode"
+            elif index_type == "pdf":
+                indexing_mode = "PDF"
+                indexing_mode_detail = "PDF mode"
+            else:
+                indexing_mode = "Full"
+                indexing_mode_detail = "Full (default) mode"
 
             app.indexing_jobs[job_id] = {
                 "status": "processing",
                 "progress": 0,
-                "message": f"Starting {indexing_type} indexing...",
+                "message": f"Starting {indexing_mode} indexing...",
+                "indexing_mode": indexing_mode_detail,
                 "client_id": client_id,
             }
+            log_info(f"[Index] Created job {job_id} with mode: {indexing_mode_detail}")
 
             def run_indexing():
                 try:
                     chatbot_root = os.getcwd()
+                    setup_path = os.path.join(chatbot_root, "src", "setup.py")
 
-                    app.indexing_jobs[job_id]["message"] = f"Running setup.py for {indexing_type} indexing..."
+                    app.indexing_jobs[job_id]["message"] = f"Running setup.py for {indexing_mode} indexing..."
                     app.indexing_jobs[job_id]["progress"] = 10
 
-                    # Build command based on index type
-                    if index_website:
-                        # Website indexing mode - use -w flag
-                        cmd = ["py", "-3.12", os.path.join(chatbot_root, "src", "setup.py"), "-n", client_id, "-w"]
+                    if index_type == "sitemap" and sitemap:
+                        cmd = ["py", "-3.12", setup_path, "-n", client_id, "-w", "-s", sitemap]
+                        log_info(f"[Index] Sitemap mode for {client_id} sitemap={sitemap}")
+                    elif index_type == "website" and urls:
+                        cmd = ["py", "-3.12", setup_path, "-n", client_id, "-w", "-u", urls]
+                        log_info(f"[Index] URL mode for {client_id} urls={urls}")
+                    elif index_type == "website":
+                        cmd = ["py", "-3.12", setup_path, "-n", client_id, "-w"]
+                        log_info(f"[Index] Full website mode for {client_id}")
+                    elif index_type == "pdf":
+                        cmd = ["py", "-3.12", setup_path, "-n", client_id]
+                        log_info(f"[Index] PDF mode for {client_id}")
                     else:
-                        # PDF indexing mode (default)
-                        cmd = ["py", "-3.12", os.path.join(chatbot_root, "src", "setup.py"), "-n", client_id]
+                        cmd = ["py", "-3.12", setup_path, "-n", client_id]
+                        log_info(f"[Index] Full (default) mode for {client_id}")
 
+                    log_info(f"[Index] Running command: {' '.join(cmd)}")
                     result = subprocess.run(
                         cmd,
                         cwd=chatbot_root,
@@ -524,11 +549,21 @@ def register_admin_endpoints(app, client_configs, logger=None):
                         text=True,
                     )
 
+                    log_info(f"[Index] Command return code: {result.returncode}")
+                    if result.stdout:
+                        log_info(f"[Index] Command stdout: {result.stdout[:500]}...")
+                    if result.stderr:
+                        log_error(f"[Index] Command stderr: {result.stderr[:500]}...")
+
                     if result.returncode == 0:
                         app.indexing_jobs[job_id].update(
-                            {"status": "completed", "progress": 100, "message": f"{indexing_type} indexing completed successfully"}
+                            {
+                                "status": "completed",
+                                "progress": 100,
+                                "message": f"{indexing_mode} indexing completed successfully",
+                            }
                         )
-                        log_info(f"{indexing_type} indexing completed for {client_id}: {job_id}")
+                        log_info(f"{indexing_mode} indexing completed for {client_id}: {job_id}")
                     else:
                         raise RuntimeError(result.stderr or "Unknown error")
                 except Exception as exc_inner:
@@ -538,7 +573,7 @@ def register_admin_endpoints(app, client_configs, logger=None):
                     log_error(f"Indexing error for {client_id}: {exc_inner}")
 
             threading.Thread(target=run_indexing, daemon=True).start()
-            log_info(f"{indexing_type} indexing started for {client_id}: {job_id}")
+            log_info(f"{indexing_mode} indexing started for {client_id}: {job_id}")
 
             return jsonify({"message": "Indexing job started", "job_id": job_id, "status": "processing"}), 202
         except ValueError as exc:
@@ -551,7 +586,9 @@ def register_admin_endpoints(app, client_configs, logger=None):
     def indexing_status(job_id):
         try:
             jobs = getattr(app, "indexing_jobs", {})
+            log_info(f"[Status] Checking job {job_id}, total jobs: {len(jobs)}, job exists: {job_id in jobs}")
             if job_id not in jobs:
+                log_error(f"[Status] Job {job_id} not found in jobs: {list(jobs.keys())}")
                 return jsonify({"error": "Job not found"}), 404
             return jsonify({"job_id": job_id, **jobs[job_id]}), 200
         except Exception as exc:
