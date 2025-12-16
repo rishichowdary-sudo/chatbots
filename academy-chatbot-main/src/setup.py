@@ -188,8 +188,43 @@ def create_vectorstore(mode=None, depth=100, website_only=False, use_sitemap=Fal
 
         if use_sitemap:
             # Sitemap mode: Load all URLs from sitemap directly
-            print("Sitemap mode: Loading URLs from sitemap")
-            docs_list = load_documents_from_urls(URLS)
+            total_urls = len(URLS)
+            BATCH_SIZE = 50
+
+            if total_urls > BATCH_SIZE:
+                print(f"Sitemap mode: Processing {total_urls} URLs in batches of {BATCH_SIZE}")
+                docs_list = []  # Will accumulate from all batches
+
+                for i in range(0, total_urls, BATCH_SIZE):
+                    batch_num = (i // BATCH_SIZE) + 1
+                    total_batches = (total_urls + BATCH_SIZE - 1) // BATCH_SIZE
+                    batch_urls = URLS[i:i+BATCH_SIZE]
+
+                    print(f"Batch {batch_num}/{total_batches}: Loading {len(batch_urls)} URLs...")
+                    batch_docs = load_documents_from_urls(batch_urls)
+
+                    # Process batch immediately to avoid memory issues
+                    batch_splits = text_splitter.split_documents(batch_docs)
+                    print(f"Batch {batch_num}/{total_batches}: Split into {len(batch_splits)} chunks")
+
+                    if 'vectorstore' not in locals():
+                        # First batch - create initial vectorstore
+                        vectorstore = FAISS.from_documents(batch_splits, embed_model)
+                        print(f"Batch {batch_num}/{total_batches}: Created initial vectorstore with {len(batch_splits)} chunks")
+                    else:
+                        # Subsequent batches - create and merge
+                        batch_vectorstore = FAISS.from_documents(batch_splits, embed_model)
+                        vectorstore.merge_from(batch_vectorstore)
+                        print(f"Batch {batch_num}/{total_batches}: Merged {len(batch_splits)} chunks into main vectorstore")
+
+                print(f"✅ Sitemap batch processing complete! Processed {total_urls} URLs in {total_batches} batches")
+                sitemap_batch_processed = True  # Flag to indicate vectorstore already created
+                docs_list = []  # All processing done, no need for further processing
+
+            else:
+                # Small sitemap - process normally
+                print(f"Sitemap mode: Loading {total_urls} URLs (small batch)")
+                docs_list = load_documents_from_urls(URLS)
         elif INDEX_MODE == "custom_urls":
             # Custom URLs mode: Load ONLY the specified URLs (no recursive crawling)
             print(f"Custom URLs mode: Loading {len(URLS)} specific URLs (no recursive crawling)")
@@ -229,40 +264,44 @@ def create_vectorstore(mode=None, depth=100, website_only=False, use_sitemap=Fal
             # create combined knowledge source of faq pdf and website index
             total_docs_list = text_docs_list + pdf_docs_list
 
-        doc_splits = text_splitter.split_documents(total_docs_list)
-
-        # BATCH PROCESSING: Split into smaller batches to avoid token limits
-        BATCH_SIZE = 30  # Process 30 URLs worth of content at a time
-        total_splits = len(doc_splits)
-
-        if total_splits > BATCH_SIZE:
-            print(f"Processing {total_splits} document chunks in batches of {BATCH_SIZE}...")
-
-            # Create first batch
-            first_batch = doc_splits[:BATCH_SIZE]
-            vectorstore = FAISS.from_documents(first_batch, embed_model)
-            print(f"Batch 1/{(total_splits + BATCH_SIZE - 1) // BATCH_SIZE}: Created initial vectorstore with {len(first_batch)} chunks")
-
-            # Process remaining batches and merge
-            for i in range(BATCH_SIZE, total_splits, BATCH_SIZE):
-                batch_num = (i // BATCH_SIZE) + 1
-                total_batches = (total_splits + BATCH_SIZE - 1) // BATCH_SIZE
-                batch = doc_splits[i:i+BATCH_SIZE]
-
-                print(f"Batch {batch_num}/{total_batches}: Processing {len(batch)} chunks...")
-                batch_vectorstore = FAISS.from_documents(batch, embed_model)
-
-                vectorstore.merge_from(batch_vectorstore)
-                print(f"Batch {batch_num}/{total_batches}: Merged into main vectorstore")
-
-            print(f"✅ All {total_batches} batches processed and merged successfully!")
+        # Check if sitemap batching already created vectorstore
+        if 'sitemap_batch_processed' in locals() and sitemap_batch_processed:
+            print("Sitemap batching already completed - skipping further processing")
         else:
-            # If small enough, process all at once
-            print(f"Processing {total_splits} document chunks (small batch, no splitting needed)...")
-            vectorstore = FAISS.from_documents(doc_splits, embed_model)
+            doc_splits = text_splitter.split_documents(total_docs_list)
 
-        # Save the documents and embeddings
-        vectorstore.save_local(vectorstore_path)
+            # BATCH PROCESSING: Split into smaller batches to avoid token limits
+            BATCH_SIZE = 30  # Process 30 URLs worth of content at a time
+            total_splits = len(doc_splits)
+
+            if total_splits > BATCH_SIZE:
+                print(f"Processing {total_splits} document chunks in batches of {BATCH_SIZE}...")
+
+                # Create first batch
+                first_batch = doc_splits[:BATCH_SIZE]
+                vectorstore = FAISS.from_documents(first_batch, embed_model)
+                print(f"Batch 1/{(total_splits + BATCH_SIZE - 1) // BATCH_SIZE}: Created initial vectorstore with {len(first_batch)} chunks")
+
+                # Process remaining batches and merge
+                for i in range(BATCH_SIZE, total_splits, BATCH_SIZE):
+                    batch_num = (i // BATCH_SIZE) + 1
+                    total_batches = (total_splits + BATCH_SIZE - 1) // BATCH_SIZE
+                    batch = doc_splits[i:i+BATCH_SIZE]
+
+                    print(f"Batch {batch_num}/{total_batches}: Processing {len(batch)} chunks...")
+                    batch_vectorstore = FAISS.from_documents(batch, embed_model)
+
+                    vectorstore.merge_from(batch_vectorstore)
+                    print(f"Batch {batch_num}/{total_batches}: Merged into main vectorstore")
+
+                print(f"✅ All {total_batches} batches processed and merged successfully!")
+            else:
+                # If small enough, process all at once
+                print(f"Processing {total_splits} document chunks (small batch, no splitting needed)...")
+                vectorstore = FAISS.from_documents(doc_splits, embed_model)
+
+            # Save the documents and embeddings
+            vectorstore.save_local(vectorstore_path)
 
     else:
         if website_only:

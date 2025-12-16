@@ -16,5 +16,17 @@
     "indexing_mode": "Sitemap mode: https://terralogic.com/product-sitemap.xml",
     "status": "failed",
     "sitemap": "https://terralogic.com/product-sitemap.xml"
+  },
+  {
+    "timestamp": "2025-12-16T09:23:34.520118",
+    "indexing_mode": "Sitemap mode: https://terralogic.com/product-sitemap.xml",
+    "status": "started",
+    "sitemap": "https://terralogic.com/product-sitemap.xml"
+  },
+  {
+    "timestamp": "2025-12-16T09:24:14.359481",
+    "indexing_mode": "Sitemap mode: https://terralogic.com/product-sitemap.xml",
+    "status": "failed",
+    "sitemap": "https://terralogic.com/product-sitemap.xml"
   }
 ]
