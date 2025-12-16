@@ -77,10 +77,25 @@ def _save_key_store(path: str, data: Dict[str, Dict]) -> None:
 
 def _save_indexing_history(client_id: str, indexing_mode: str, urls: str = None, sitemap: str = None, status: str = "unknown") -> None:
     try:
-        # Get the client's data directory
-        config = client_configs.get(client_id, {})
+        # Get the client's data directory (same way as get_indexing_history endpoint)
+        # We need to load the client config directly since we're outside the register_admin_endpoints scope
+        import configparser
+        import os
+
+        # Load client properties
+        client_props_file = os.path.join(os.getcwd(), "client_properties.yaml")
+        if os.path.exists(client_props_file):
+            import yaml
+            with open(client_props_file, 'r') as f:
+                all_props = yaml.safe_load(f)
+                config = all_props.get(client_id, {})
+        else:
+            config = {}
+
         root_dir = _client_root(config, client_id)
-        history_file = os.path.join(root_dir, client_id, "indexing_history.json")
+        client_dir = os.path.join(root_dir, client_id)
+        os.makedirs(client_dir, exist_ok=True)
+        history_file = os.path.join(client_dir, "indexing_history.json")
 
         # Load existing history
         if os.path.exists(history_file):

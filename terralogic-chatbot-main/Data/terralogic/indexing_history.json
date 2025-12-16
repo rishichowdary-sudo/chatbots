@@ -1,0 +1,20 @@
+[
+  {
+    "timestamp": "2025-12-16T09:12:17.654224",
+    "indexing_mode": "URL mode: https://example.com",
+    "status": "started",
+    "urls": "https://example.com"
+  },
+  {
+    "timestamp": "2025-12-16T09:18:59.150404",
+    "indexing_mode": "Sitemap mode: https://terralogic.com/product-sitemap.xml",
+    "status": "started",
+    "sitemap": "https://terralogic.com/product-sitemap.xml"
+  },
+  {
+    "timestamp": "2025-12-16T09:19:43.499437",
+    "indexing_mode": "Sitemap mode: https://terralogic.com/product-sitemap.xml",
+    "status": "completed",
+    "sitemap": "https://terralogic.com/product-sitemap.xml"
+  }
+]

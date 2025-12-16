@@ -80,7 +80,9 @@ def _save_indexing_history(client_id: str, indexing_mode: str, urls: str = None,
         # Get the client's data directory
         config = client_configs.get(client_id, {}) if client_configs else {}
         root_dir = _client_root(config, client_id)
-        history_file = os.path.join(root_dir, client_id, "indexing_history.json")
+        client_dir = os.path.join(root_dir, client_id)
+        os.makedirs(client_dir, exist_ok=True)
+        history_file = os.path.join(client_dir, "indexing_history.json")
 
         # Load existing history
         if os.path.exists(history_file):
