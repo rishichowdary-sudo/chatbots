@@ -704,8 +704,11 @@ def register_admin_endpoints(app, client_configs, logger=None):
             else:
                 history = []
 
-            # Return most recent 20 entries
-            return jsonify({"history": history[-20:]}), 200
+            # Filter to only show completed indexing operations
+            completed_history = [entry for entry in history if entry.get("status") == "completed"]
+
+            # Return most recent 20 completed entries
+            return jsonify({"history": completed_history[-20:]}), 200
 
         except Exception as exc:
             log_error(f"Error retrieving indexing history: {exc}")
