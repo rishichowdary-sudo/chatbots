@@ -24,14 +24,16 @@ from shared_admin_api import load_api_key_for_provider
 parser = argparse.ArgumentParser(description="Parse company name from terminal.")
 parser.add_argument('-n', '--name', type=str, required=True, help='Name of the company')
 parser.add_argument('-w', '--website', action='store_true', help='Index website only (skip PDFs)')
+parser.add_argument('-p', '--pdf', action='store_true', help='Index PDFs only (skip website)')
 parser.add_argument('-u', '--urls', type=str, help='Comma-separated list of URLs to index')
 parser.add_argument('-s', '--sitemap', type=str, help='Sitemap XML URL to extract and index URLs from')
 args = parser.parse_args()
 client = args.name
 index_website_only = args.website
+index_pdf_only = args.pdf
 custom_urls = args.urls.split(',') if args.urls else None
 sitemap_url = args.sitemap
-print(f"Client: {client}, Website Only: {index_website_only}, Custom URLs: {custom_urls}, Sitemap: {sitemap_url}")
+print(f"Client: {client}, Website Only: {index_website_only}, PDF Only: {index_pdf_only}, Custom URLs: {custom_urls}, Sitemap: {sitemap_url}")
 
 # Load properties from YAML file
 properties_file = os.path.join(os.getcwd(), "client_properties.yaml")
@@ -168,12 +170,13 @@ def load_documents_from_urls(urls: list, extractor=None) -> list:
     print(f"Successfully loaded {len(documents)} documents from {total} URLs")
     return documents
 
-def create_vectorstore(mode=None, depth=100, website_only=False, use_sitemap=False):
+def create_vectorstore(mode=None, depth=100, website_only=False, pdf_only=False, use_sitemap=False):
     """
     if block: if no vectorstore present, creates vectorstore with both urlloader and faq document
     else block: if vectorstore present, loads from disk and merges faw vectorstore with it
 
     website_only: If True, only index website content (skip PDFs)
+    pdf_only: If True, only index PDFs (skip website)
     use_sitemap: If True, load URLs from sitemap instead of recursive crawling
     """
 
@@ -181,7 +184,11 @@ def create_vectorstore(mode=None, depth=100, website_only=False, use_sitemap=Fal
     if not os.path.exists(vectorstore_path) or len(os.listdir(vectorstore_path)) == 0:
         docs_list = []
 
-        if use_sitemap:
+        # If PDF-only mode, skip all website indexing
+        if pdf_only:
+            print("PDF-only mode: Skipping website indexing")
+            text_docs_list = []
+        elif use_sitemap:
             # Sitemap mode: Load all URLs from sitemap directly
             total_urls = len(URLS)
             BATCH_SIZE = 50
@@ -249,15 +256,22 @@ def create_vectorstore(mode=None, depth=100, website_only=False, use_sitemap=Fal
             # filter out rubbish files from recursive crawling
             text_docs_list = [doc for doc in docs_list if 'text/html' in doc.metadata['content_type']]
 
-        # Conditionally load PDFs based on website_only flag
-        if website_only:
-            print("Website-only mode: Skipping PDF indexing")
-            total_docs_list = text_docs_list
-        else:
-            # load faq document(s)
+        # Conditionally load PDFs and website based on flags
+        if pdf_only:
+            # PDF-only mode: Load PDFs, no website
+            print("PDF-only mode: Loading PDFs, skipping website")
             pdf_path = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
             pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir)
-            # create combined knowledge source of faq pdf and website index
+            total_docs_list = pdf_docs_list
+        elif website_only:
+            # Website-only mode: Load website, no PDFs
+            print("Website-only mode: Loading website, skipping PDFs")
+            total_docs_list = text_docs_list
+        else:
+            # Default mode: Load both website and PDFs
+            print("Full mode: Loading both website and PDFs")
+            pdf_path = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
+            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir)
             total_docs_list = text_docs_list + pdf_docs_list
 
         # Check if sitemap batching already created vectorstore
@@ -438,7 +452,7 @@ if __name__ == "__main__":
         print("Created FAQ Embeddings for LLM-free journey ---------------------")
 
     # create vectorstore for RAG
-    create_vectorstore(depth=1, website_only=index_website_only, use_sitemap=use_sitemap_mode)
+    create_vectorstore(depth=1, website_only=index_website_only, pdf_only=index_pdf_only, use_sitemap=use_sitemap_mode)
 
     if use_sitemap_mode:
         print("Created Vectorstore from sitemap URLs ----------------")

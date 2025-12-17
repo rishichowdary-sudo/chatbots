@@ -24,14 +24,16 @@ from shared_admin_api import load_api_key_for_provider
 parser = argparse.ArgumentParser(description="Parse company name from terminal.")
 parser.add_argument('-n', '--name', type=str, required=True, help='Name of the company')
 parser.add_argument('-w', '--website', action='store_true', help='Index website only (skip PDFs)')
+parser.add_argument('-p', '--pdf', action='store_true', help='Index PDFs only (skip website)')
 parser.add_argument('-u', '--urls', type=str, help='Comma-separated list of URLs to index')
 parser.add_argument('-s', '--sitemap', type=str, help='Sitemap XML URL to extract and index URLs from')
 args = parser.parse_args()
 client = args.name
 index_website_only = args.website
+index_pdf_only = args.pdf
 custom_urls = args.urls.split(',') if args.urls else None
 sitemap_url = args.sitemap
-print(f"Client: {client}, Website Only: {index_website_only}, Custom URLs: {custom_urls}, Sitemap: {sitemap_url}")
+print(f"Client: {client}, Website Only: {index_website_only}, PDF Only: {index_pdf_only}, Custom URLs: {custom_urls}, Sitemap: {sitemap_url}")
 
 # Load properties from YAML file
 properties_file = os.path.join(os.getcwd(), "client_properties.yaml")
@@ -56,12 +58,7 @@ elif custom_urls:
 else:
     URLS = [client_properties["URL"]]
     INDEX_MODE = "default"
-VECTOR_STORE_FILE = client_properties["VECTOR_STORE_FILE"]
-
-PDF_PATH = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
-EMBEDDINGS_PATH = os.path.join(ROOT_DIR, CLIENT_NAME, EMBEDDINGS_FILE)
-FAQ_JSON_PATH = os.path.join(ROOT_DIR, CLIENT_NAME, FAQ_JSON_FILE)
-vectorstore_path = os.path.join(ROOT_DIR, CLIENT_NAME, VECTOR_STORE_FILE)
+vectorstore_path = os.path.join(ROOT_DIR, CLIENT_NAME, client_properties["VECTOR_STORE_FILE"])
 uploads_dir = os.path.join(ROOT_DIR, CLIENT_NAME, "uploads")
 
 # Load BYOK secrets (e.g., OpenAI) so embeddings work without .env edits
@@ -149,7 +146,7 @@ def load_documents_from_urls(urls: list, extractor=None) -> list:
     documents = []
     total = len(urls)
 
-    print(f"Loading {total} URLs from sitemap...")
+    print(f"Loading {total} custom URLs (non-recursive)...")
 
     for idx, url in enumerate(urls, 1):
         try:
@@ -173,12 +170,13 @@ def load_documents_from_urls(urls: list, extractor=None) -> list:
     print(f"Successfully loaded {len(documents)} documents from {total} URLs")
     return documents
 
-def create_vectorstore(mode=None, depth=100, website_only=False, use_sitemap=False):
+def create_vectorstore(mode=None, depth=100, website_only=False, pdf_only=False, use_sitemap=False):
     """
     if block: if no vectorstore present, creates vectorstore with both urlloader and faq document
     else block: if vectorstore present, loads from disk and merges faw vectorstore with it
 
     website_only: If True, only index website content (skip PDFs)
+    pdf_only: If True, only index PDFs (skip website)
     use_sitemap: If True, load URLs from sitemap instead of recursive crawling
     """
 
@@ -186,7 +184,11 @@ def create_vectorstore(mode=None, depth=100, website_only=False, use_sitemap=Fal
     if not os.path.exists(vectorstore_path) or len(os.listdir(vectorstore_path)) == 0:
         docs_list = []
 
-        if use_sitemap:
+        # If PDF-only mode, skip all website indexing
+        if pdf_only:
+            print("PDF-only mode: Skipping website indexing")
+            text_docs_list = []
+        elif use_sitemap:
             # Sitemap mode: Load all URLs from sitemap directly
             total_urls = len(URLS)
             BATCH_SIZE = 50
@@ -254,14 +256,22 @@ def create_vectorstore(mode=None, depth=100, website_only=False, use_sitemap=Fal
             # filter out rubbish files from recursive crawling
             text_docs_list = [doc for doc in docs_list if 'text/html' in doc.metadata['content_type']]
 
-        # Conditionally load PDFs based on website_only flag
-        if website_only:
-            print("Website-only mode: Skipping PDF indexing")
+        # Conditionally load PDFs and website based on flags
+        if pdf_only:
+            # PDF-only mode: Load PDFs, no website
+            print("PDF-only mode: Loading PDFs, skipping website")
+            pdf_path = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
+            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir)
+            total_docs_list = pdf_docs_list
+        elif website_only:
+            # Website-only mode: Load website, no PDFs
+            print("Website-only mode: Loading website, skipping PDFs")
             total_docs_list = text_docs_list
         else:
-            # load faq document(s)
-            pdf_docs_list = load_pdf_documents(PDF_PATH, uploads_dir)
-            # create combined knowledge source of faq pdf and website index
+            # Default mode: Load both website and PDFs
+            print("Full mode: Loading both website and PDFs")
+            pdf_path = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
+            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir)
             total_docs_list = text_docs_list + pdf_docs_list
 
         # Check if sitemap batching already created vectorstore
@@ -378,7 +388,8 @@ def create_vectorstore(mode=None, depth=100, website_only=False, use_sitemap=Fal
             vectorstore = FAISS.load_local(vectorstore_path, embed_model, allow_dangerous_deserialization=True)
 
             # load faq document(s)
-            pdf_docs_list = load_pdf_documents(PDF_PATH, uploads_dir)
+            pdf_path = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
+            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir)
             print(f"Loaded {len(pdf_docs_list)} PDF documents (pages)")
 
             if len(pdf_docs_list) > 0:
@@ -423,20 +434,25 @@ if __name__ == "__main__":
 
     # Load FAQ data on startup (skip if website-only mode)
     if not index_website_only:
+        # Construct paths
+        pdf_path = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
+        embeddings_path = os.path.join(ROOT_DIR, CLIENT_NAME, EMBEDDINGS_FILE)
+        faq_json_path = os.path.join(ROOT_DIR, CLIENT_NAME, FAQ_JSON_FILE)
+        
         # Force regeneration of FAQ data to include new uploads
-        if os.path.exists(FAQ_JSON_PATH):
-            os.remove(FAQ_JSON_PATH)
-            print(f"Removed existing FAQ JSON: {FAQ_JSON_PATH}")
-        if os.path.exists(EMBEDDINGS_PATH):
-            os.remove(EMBEDDINGS_PATH)
-            print(f"Removed existing Embeddings: {EMBEDDINGS_PATH}")
+        if os.path.exists(faq_json_path):
+            os.remove(faq_json_path)
+            print(f"Removed existing FAQ JSON: {faq_json_path}")
+        if os.path.exists(embeddings_path):
+            os.remove(embeddings_path)
+            print(f"Removed existing Embeddings: {embeddings_path}")
 
-        search_obj = SearchNode(PDF_PATH, EMBEDDINGS_PATH, FAQ_JSON_PATH, uploads_dir)
+        search_obj = SearchNode(pdf_path, embeddings_path, faq_json_path, uploads_dir)
         search_obj.load_faq_data()
         print("Created FAQ Embeddings for LLM-free journey ---------------------")
 
     # create vectorstore for RAG
-    create_vectorstore(depth=1, website_only=index_website_only, use_sitemap=use_sitemap_mode)
+    create_vectorstore(depth=1, website_only=index_website_only, pdf_only=index_pdf_only, use_sitemap=use_sitemap_mode)
 
     if use_sitemap_mode:
         print("Created Vectorstore from sitemap URLs ----------------")

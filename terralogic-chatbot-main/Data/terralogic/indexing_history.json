@@ -56,5 +56,27 @@
     "timestamp": "2025-12-17T16:47:51.709446",
     "indexing_mode": "PDF mode",
     "status": "completed"
+  },
+  {
+    "timestamp": "2025-12-17T21:00:11.577113",
+    "indexing_mode": "URL mode: https://lollypop.design/about/",
+    "status": "started",
+    "urls": "https://lollypop.design/about/"
+  },
+  {
+    "timestamp": "2025-12-17T21:00:27.706989",
+    "indexing_mode": "URL mode: https://lollypop.design/about/",
+    "status": "completed",
+    "urls": "https://lollypop.design/about/"
+  },
+  {
+    "timestamp": "2025-12-17T21:18:26.353860",
+    "indexing_mode": "PDF mode",
+    "status": "started"
+  },
+  {
+    "timestamp": "2025-12-17T21:18:46.254316",
+    "indexing_mode": "PDF mode",
+    "status": "completed"
   }
 ]

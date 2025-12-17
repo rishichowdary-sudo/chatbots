@@ -568,20 +568,25 @@ def register_admin_endpoints(app, client_configs, logger=None):
                     python_cmd = venv_python if os.path.exists(venv_python) else sys.executable
 
                     if index_type == "sitemap" and sitemap:
+                        # Sitemap: Index only sitemap URLs, skip PDFs
                         cmd = [python_cmd, setup_path, "-n", client_id, "-w", "-s", sitemap]
                         log_info(f"[Index] Sitemap mode for {client_id} sitemap={sitemap}")
                     elif index_type == "website" and urls:
+                        # Custom URLs: Index only specified URLs, skip PDFs
                         cmd = [python_cmd, setup_path, "-n", client_id, "-w", "-u", urls]
                         log_info(f"[Index] URL mode for {client_id} urls={urls}")
                     elif index_type == "website":
-                        cmd = [python_cmd, setup_path, "-n", client_id, "-w"]
-                        log_info(f"[Index] Full website mode for {client_id}")
+                        # Full Website: Index website recursively + PDFs (no -w flag!)
+                        cmd = [python_cmd, setup_path, "-n", client_id]
+                        log_info(f"[Index] Full website mode for {client_id} (includes PDFs)")
                     elif index_type == "pdf":
-                        cmd = [python_cmd, setup_path, "-n", client_id]
-                        log_info(f"[Index] PDF mode for {client_id}")
+                        # PDF Only: Index only PDFs, skip website
+                        cmd = [python_cmd, setup_path, "-n", client_id, "-p"]
+                        log_info(f"[Index] PDF mode for {client_id} (PDFs only, no website)")
                     else:
+                        # All/Default: Index both website + PDFs
                         cmd = [python_cmd, setup_path, "-n", client_id]
-                        log_info(f"[Index] Full (default) mode for {client_id}")
+                        log_info(f"[Index] Full (default) mode for {client_id} (website + PDFs)")
 
                     log_info(f"[Index] Running command: {' '.join(cmd)}")
                     result = subprocess.run(
