@@ -16,5 +16,45 @@
     "indexing_mode": "Sitemap mode: https://terralogic.com/product-sitemap.xml",
     "status": "completed",
     "sitemap": "https://terralogic.com/product-sitemap.xml"
+  },
+  {
+    "timestamp": "2025-12-17T16:18:15.959505",
+    "indexing_mode": "PDF mode",
+    "status": "started"
+  },
+  {
+    "timestamp": "2025-12-17T16:18:17.244795",
+    "indexing_mode": "PDF mode",
+    "status": "failed"
+  },
+  {
+    "timestamp": "2025-12-17T16:19:52.545654",
+    "indexing_mode": "PDF mode",
+    "status": "started"
+  },
+  {
+    "timestamp": "2025-12-17T16:19:53.013096",
+    "indexing_mode": "PDF mode",
+    "status": "failed"
+  },
+  {
+    "timestamp": "2025-12-17T16:20:02.699748",
+    "indexing_mode": "PDF mode",
+    "status": "started"
+  },
+  {
+    "timestamp": "2025-12-17T16:20:03.123806",
+    "indexing_mode": "PDF mode",
+    "status": "failed"
+  },
+  {
+    "timestamp": "2025-12-17T16:47:11.521565",
+    "indexing_mode": "PDF mode",
+    "status": "started"
+  },
+  {
+    "timestamp": "2025-12-17T16:47:51.709446",
+    "indexing_mode": "PDF mode",
+    "status": "completed"
   }
 ]

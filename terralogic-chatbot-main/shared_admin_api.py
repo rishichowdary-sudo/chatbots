@@ -623,20 +623,24 @@ def register_admin_endpoints(app, client_configs, logger=None):
                     app.indexing_jobs[job_id]["message"] = f"Running setup.py for {indexing_mode} indexing..."
                     app.indexing_jobs[job_id]["progress"] = 10
 
+                    # Use venv Python instead of system Python to access installed packages
+                    venv_python = os.path.join(chatbot_root, "venv", "Scripts", "python.exe")
+                    python_cmd = venv_python if os.path.exists(venv_python) else sys.executable
+
                     if index_type == "sitemap" and sitemap:
-                        cmd = ["py", "-3.12", setup_path, "-n", client_id, "-w", "-s", sitemap]
+                        cmd = [python_cmd, setup_path, "-n", client_id, "-w", "-s", sitemap]
                         log_info(f"[Index] Sitemap mode for {client_id} sitemap={sitemap}")
                     elif index_type == "website" and urls:
-                        cmd = ["py", "-3.12", setup_path, "-n", client_id, "-w", "-u", urls]
+                        cmd = [python_cmd, setup_path, "-n", client_id, "-w", "-u", urls]
                         log_info(f"[Index] URL mode for {client_id} urls={urls}")
                     elif index_type == "website":
-                        cmd = ["py", "-3.12", setup_path, "-n", client_id, "-w"]
+                        cmd = [python_cmd, setup_path, "-n", client_id, "-w"]
                         log_info(f"[Index] Full website mode for {client_id}")
                     elif index_type == "pdf":
-                        cmd = ["py", "-3.12", setup_path, "-n", client_id]
+                        cmd = [python_cmd, setup_path, "-n", client_id]
                         log_info(f"[Index] PDF mode for {client_id}")
                     else:
-                        cmd = ["py", "-3.12", setup_path, "-n", client_id]
+                        cmd = [python_cmd, setup_path, "-n", client_id]
                         log_info(f"[Index] Full (default) mode for {client_id}")
 
                     result = subprocess.run(
