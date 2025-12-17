@@ -90,14 +90,23 @@ class MultiTenantGraph:
         self.state_in_memory = state_in_memory
         # decision_llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=os.getenv("GOOGLE_API_KEY"))
         # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-        decision_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-        embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
-        
+
+        # Initialize LLMs with error handling to allow startup without API keys
+        try:
+            llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+            decision_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+            embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
+        except Exception as e:
+            logger.warning(f"Failed to initialize LLMs for {client} - API key may not be configured: {e}")
+            # Set to None to allow deferred initialization
+            llm = None
+            decision_llm = None
+            embeddings = None
+
         client_properties = load_client_properties(self.client)
 
-        # Node creations
-        if load_nodes:
+        # Node creations - only if LLMs initialized successfully
+        if load_nodes and llm is not None:
             all_prompts = load_prompts(client_properties)
             self.supervisor_agent = Supervisor(decision_llm, all_prompts)
             self.supervisor_node = self.supervisor_agent.understand
@@ -109,6 +118,13 @@ class MultiTenantGraph:
             self.faq_node = faq_subgraph.faq_llm_career_build_graph()
 
             self.fallback_node = self.supervisor_agent.fallback
+        else:
+            # Set placeholder nodes if LLMs not available
+            self.supervisor_agent = None
+            self.supervisor_node = None
+            self.service_info_node = None
+            self.faq_node = None
+            self.fallback_node = None
         
         app_properties = load_application_properties()
         self.state_db_dir = app_properties['STATE_DB_PATH']     # getting the parent directory of db file
@@ -116,6 +132,12 @@ class MultiTenantGraph:
             os.makedirs(self.state_db_dir, exist_ok=True)
 
     def build_graph(self):
+        # Skip graph building if nodes weren't initialized (no API key)
+        if self.supervisor_node is None:
+            logger.warning(f"Cannot build graph for {self.client} - nodes not initialized (API key required)")
+            self.graph = None
+            return
+
         graph_builder = StateGraph(OverallState)
         graph_builder.add_node("supervisor_node", self.supervisor_node)
         graph_builder.add_node("introduction_node", self.service_info_node)
@@ -133,13 +155,13 @@ class MultiTenantGraph:
         if self.state_in_memory:
             memory = MemorySaver()
         else:
-            # creating file only by date, to avoid multiple files creation in gunicorn 
+            # creating file only by date, to avoid multiple files creation in gunicorn
 
             # commenting out on Dec 2, 2024 to resolve multiple file creation
             # curr_time = datetime.now().strftime("%Y%m%d")
             # db_file = f"{self.client}_{curr_time}.db"
-            ## 
-            
+            ##
+
             state_db_file = os.path.join(self.state_db_dir, self.client)
             conn = sqlite3.connect(state_db_file, check_same_thread=False)
             memory = SqliteSaver(conn)

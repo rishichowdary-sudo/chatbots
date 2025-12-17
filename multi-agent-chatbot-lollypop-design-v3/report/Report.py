@@ -30,8 +30,8 @@ state_db_path = application_properties["STATE_DB_PATH"]
 log_db_path = application_properties["LOG_DB_PATH"]
 log_db_file = os.path.join(log_db_path, "Log.db")
 
-# conversation summarizer requires llm, report app provides it.
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+# NOTE: LLM is now initialized lazily when needed (in fetch function)
+# This allows the chatbot to start without API keys present
 
 def ensure_schema_upgrade(client_id):
     """
@@ -151,8 +151,16 @@ def fetch(client_id):
             conn.execute("PRAGMA wal_checkpoint(FULL);")
             conn.close()
 
-        # summarize all the unprocessed 
+        # summarize all the unprocessed
         start = time.perf_counter()
+
+        # Create LLM instance lazily when needed (allows chatbot to start without API keys)
+        try:
+            llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        except Exception as llm_error:
+            logger.error(f"Failed to initialize LLM - API key may not be configured: {llm_error}")
+            return {}  # Return empty dict if LLM can't be initialized
+
         result, total_conversations, rejected_conversations = conv_summarizer.conversation_summary_from_db(llm, state_db_load_file, log_db_file)
         summary_duration = time.perf_counter() - start
         logger.info(f"Summarizer Completed: Total - {total_conversations}, Rejected - {rejected_conversations}, Summary Duration - {summary_duration:.4f}")

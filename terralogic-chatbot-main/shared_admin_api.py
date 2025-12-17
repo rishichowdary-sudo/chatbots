@@ -880,6 +880,12 @@ def register_admin_endpoints(app, client_configs, logger=None):
                 last_response = None
                 turns = len(conversation)
 
+                # Filter out conversations with less than 3 turns (user messages)
+                # This matches the filter in conv_summarizer.py which requires > 5 total messages
+                # 3 turns ≈ 3 user + 3 AI = 6 total messages (meets the > 5 requirement)
+                if turns < 3:
+                    continue
+
                 if conversation:
                     last_key = list(conversation.keys())[-1] if conversation.keys() else None
                     if last_key:

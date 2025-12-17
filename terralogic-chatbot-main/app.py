@@ -20,7 +20,7 @@ import utils.helper as helper
 import utils.decorators as decorator
 import src.graphs.graph_v3 as graph_v3
 import utils.data_backup_runner as data_backup_runner
-import report.Report as report
+# NOTE: report.Report import moved below to load API keys first
 from shared_admin_api import register_admin_endpoints, apply_client_api_keys, save_conversation_to_json, save_to_report_db
 
 # Load client configurations from YAML
@@ -28,8 +28,12 @@ with open('client_properties.yaml', 'r') as f:
     client_configs = yaml.safe_load(f)
 
 # Preload BYOK secrets for every configured client
+# This MUST happen before importing report.Report (which uses ChatOpenAI)
 for configured_client in client_configs.keys():
     apply_client_api_keys(configured_client, client_configs, logger)
+
+# NOW import report after API keys are loaded
+import report.Report as report
 
 # Pre-load graphs at startup to avoid lazy-loading delays and errors
 client_graphs = {}
