@@ -182,3 +182,18 @@ application_logs
 application_db
 
 
+
+# PDFs
+**/*.pdf
+**/uploads/
+
+# Vector stores & embeddings
+**/vectorstore.db/
+**/*.npz
+
+# Indexing data
+**/indexing_history.json
+
+# Secrets
+**/secrets/
+**/api_keys.json
