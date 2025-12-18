@@ -735,6 +735,136 @@ def register_admin_endpoints(app, client_configs, logger=None):
             log_error(f"Error retrieving indexing history: {exc}")
             return jsonify({"error": str(exc)}), 500
 
+    @app.route("/api/indexing/clear-vectorstore", methods=["POST"])
+    def clear_vectorstore():
+        """
+        Clear the vectorstore to allow fresh re-indexing.
+        Used when user wants to "Replace" existing indexed content.
+        """
+        import shutil
+        try:
+            data = request.json or {}
+            client_id = data.get("client_id")
+            
+            config = _validate_client(client_id)
+            root_dir = _client_root(config, client_id)
+            
+            # Get vectorstore path from config
+            vector_store_file = config.get("VECTOR_STORE_FILE", "vectorstore.db")
+            vectorstore_path = os.path.join(root_dir, client_id, vector_store_file)
+            
+            # Clear the vectorstore directory if it exists
+            if os.path.exists(vectorstore_path):
+                # Remove all files in the vectorstore directory
+                for filename in os.listdir(vectorstore_path):
+                    file_path = os.path.join(vectorstore_path, filename)
+                    try:
+                        if os.path.isfile(file_path):
+                            os.remove(file_path)
+                        elif os.path.isdir(file_path):
+                            shutil.rmtree(file_path)
+                    except Exception as e:
+                        log_error(f"Error removing {file_path}: {e}")
+                
+                log_info(f"Cleared vectorstore for {client_id}")
+                return jsonify({
+                    "success": True,
+                    "message": f"Vectorstore cleared for {client_id}",
+                    "path": vectorstore_path
+                }), 200
+            else:
+                return jsonify({
+                    "success": True,
+                    "message": "Vectorstore directory does not exist (nothing to clear)",
+                    "path": vectorstore_path
+                }), 200
+                
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            log_error(f"Error clearing vectorstore: {exc}")
+            return jsonify({"error": str(exc)}), 500
+
+    @app.route("/api/indexing/check-duplicate", methods=["POST"])
+    def check_duplicate_indexing():
+        """
+        Check if a sitemap URL or custom URLs have already been indexed.
+        Returns duplicate info if found in indexing history.
+        """
+        try:
+            data = request.json or {}
+            client_id = data.get("client_id")
+            index_type = (data.get("index_type") or "").strip()  # 'sitemap' or 'website'
+            sitemap = (data.get("sitemap") or "").strip()
+            urls = (data.get("urls") or "").strip()
+            
+            config = _validate_client(client_id)
+            root_dir = _client_root(config, client_id)
+            
+            # Read history file
+            history_file = os.path.join(root_dir, client_id, "indexing_history.json")
+            if not os.path.exists(history_file):
+                return jsonify({
+                    "is_duplicate": False,
+                    "duplicates": [],
+                    "checked_value": sitemap or urls
+                }), 200
+            
+            with open(history_file, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+            
+            # Filter to only completed entries
+            completed_history = [entry for entry in history if entry.get("status") == "completed"]
+            
+            duplicates = []
+            
+            if index_type == "sitemap" and sitemap:
+                # Check for matching sitemap URL
+                sitemap_lower = sitemap.lower().strip()
+                for entry in completed_history:
+                    entry_sitemap = (entry.get("sitemap") or "").lower().strip()
+                    if entry_sitemap == sitemap_lower:
+                        duplicates.append({
+                            "type": "sitemap",
+                            "value": entry.get("sitemap"),
+                            "timestamp": entry.get("timestamp"),
+                            "indexing_mode": entry.get("indexing_mode")
+                        })
+            
+            elif urls:
+                # Check for matching URLs
+                # Split the incoming URLs and normalize
+                url_list = [u.strip().lower() for u in urls.split(",") if u.strip()]
+                
+                for entry in completed_history:
+                    entry_urls = entry.get("urls", "")
+                    if entry_urls:
+                        entry_url_list = [u.strip().lower() for u in entry_urls.split(",") if u.strip()]
+                        # Check for any overlap
+                        matching_urls = set(url_list) & set(entry_url_list)
+                        if matching_urls:
+                            duplicates.append({
+                                "type": "urls",
+                                "value": entry.get("urls"),
+                                "matching_urls": list(matching_urls),
+                                "timestamp": entry.get("timestamp"),
+                                "indexing_mode": entry.get("indexing_mode")
+                            })
+            
+            log_info(f"Indexing duplicate check for {index_type}: found {len(duplicates)} duplicate(s)")
+            return jsonify({
+                "is_duplicate": len(duplicates) > 0,
+                "duplicates": duplicates,
+                "index_type": index_type,
+                "checked_value": sitemap or urls
+            }), 200
+            
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            log_error(f"Error checking for indexing duplicates: {exc}")
+            return jsonify({"error": str(exc)}), 500
+
     @app.route("/api/keys", methods=["GET"])
     def list_api_keys():
         try:

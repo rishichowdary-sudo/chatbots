@@ -34,5 +34,29 @@
     "indexing_mode": "URL mode: https://example.com/page1,https://example.com/page2,https://example.com/page3,https://example.com/page4,https://example.com/page5,https://example.com/page6,https://example.com/page7,https://example.com/page8,https://example.com/page9,https://example.com/page10,https://example.com/page11,https://example.com/page12,https://example.com/page13,https://example.com/page14,https://example.com/page15,https://example.com/page16,https://example.com/page17,https://example.com/page18,https://example.com/page19,https://example.com/page20,https://example.com/page21,https://example.com/page22,https://example.com/page23,https://example.com/page24,https://example.com/page25,https://example.com/page26,https://example.com/page27,https://example.com/page28,https://example.com/page29,https://example.com/page30,https://example.com/page31,https://example.com/page32,https://example.com/page33,https://example.com/page34,https://example.com/page35,https://example.com/page36,https://example.com/page37,https://example.com/page38,https://example.com/page39,https://example.com/page40,https://example.com/page41,https://example.com/page42,https://example.com/page43,https://example.com/page44,https://example.com/page45,https://example.com/page46,https://example.com/page47,https://example.com/page48,https://example.com/page49,https://example.com/page50,https://example.com/page51,https://example.com/page52,https://example.com/page53,https://example.com/page54,https://example.com/page55",
     "status": "started",
     "urls": "https://example.com/page1,https://example.com/page2,https://example.com/page3,https://example.com/page4,https://example.com/page5,https://example.com/page6,https://example.com/page7,https://example.com/page8,https://example.com/page9,https://example.com/page10,https://example.com/page11,https://example.com/page12,https://example.com/page13,https://example.com/page14,https://example.com/page15,https://example.com/page16,https://example.com/page17,https://example.com/page18,https://example.com/page19,https://example.com/page20,https://example.com/page21,https://example.com/page22,https://example.com/page23,https://example.com/page24,https://example.com/page25,https://example.com/page26,https://example.com/page27,https://example.com/page28,https://example.com/page29,https://example.com/page30,https://example.com/page31,https://example.com/page32,https://example.com/page33,https://example.com/page34,https://example.com/page35,https://example.com/page36,https://example.com/page37,https://example.com/page38,https://example.com/page39,https://example.com/page40,https://example.com/page41,https://example.com/page42,https://example.com/page43,https://example.com/page44,https://example.com/page45,https://example.com/page46,https://example.com/page47,https://example.com/page48,https://example.com/page49,https://example.com/page50,https://example.com/page51,https://example.com/page52,https://example.com/page53,https://example.com/page54,https://example.com/page55"
+  },
+  {
+    "timestamp": "2025-12-19T00:43:47.780745",
+    "indexing_mode": "URL mode: https://terralogic.com/about-us/",
+    "status": "started",
+    "urls": "https://terralogic.com/about-us/"
+  },
+  {
+    "timestamp": "2025-12-19T00:44:13.443319",
+    "indexing_mode": "URL mode: https://terralogic.com/about-us/",
+    "status": "completed",
+    "urls": "https://terralogic.com/about-us/"
+  },
+  {
+    "timestamp": "2025-12-19T00:53:31.354135",
+    "indexing_mode": "URL mode: https://terralogic.com/about-us/",
+    "status": "started",
+    "urls": "https://terralogic.com/about-us/"
+  },
+  {
+    "timestamp": "2025-12-19T00:53:57.287222",
+    "indexing_mode": "URL mode: https://terralogic.com/about-us/",
+    "status": "completed",
+    "urls": "https://terralogic.com/about-us/"
   }
 ]
