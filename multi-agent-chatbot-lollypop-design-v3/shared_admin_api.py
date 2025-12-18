@@ -507,6 +507,69 @@ def register_admin_endpoints(app, client_configs, logger=None):
             log_error(f"Error deleting file: {exc}")
             return jsonify({"error": str(exc)}), 500
 
+    @app.route("/api/files/check-duplicate", methods=["POST"])
+    def check_duplicate_file():
+        """
+        Check if a file with the same name already exists.
+        Returns duplicate info if found.
+        
+        Note: DOC/DOCX files are converted to PDF on upload, so we normalize
+        the filename to .pdf before checking (e.g., document.docx -> document.pdf)
+        """
+        try:
+            data = request.json or {}
+            client_id = data.get("client_id")
+            filename = data.get("filename", "").strip()
+            
+            config = _validate_client(client_id)
+            root_dir = _client_root(config, client_id)
+            upload_dir = os.path.join(root_dir, client_id, "uploads")
+            
+            if not filename:
+                return jsonify({"error": "Filename is required"}), 400
+                
+            # Normalize filename: DOC/DOCX are stored as PDF
+            base_filename = filename.lower()
+            name_without_ext, ext = os.path.splitext(base_filename)
+            if ext in [".doc", ".docx"]:
+                base_filename = name_without_ext + ".pdf"
+            
+            duplicates = []
+            if os.path.exists(upload_dir):
+                for existing_file in os.listdir(upload_dir):
+                    # Files are stored as UUID_originalname.pdf
+                    parts = existing_file.split("_", 1)
+                    if len(parts) > 1:
+                        original_name = parts[1].lower()
+                        file_id = parts[0]
+                    else:
+                        original_name = existing_file.lower()
+                        file_id = None
+                    
+                    if original_name == base_filename:
+                        filepath = os.path.join(upload_dir, existing_file)
+                        duplicates.append({
+                            "document_id": file_id,
+                            "filename": existing_file,
+                            "original_name": parts[1] if len(parts) > 1 else existing_file,
+                            "uploaded_at": os.path.getctime(filepath),
+                            "size": os.path.getsize(filepath)
+                        })
+            
+            log_info(f"Duplicate check for {filename}: found {len(duplicates)} duplicate(s)")
+            return jsonify({
+                "is_duplicate": len(duplicates) > 0,
+                "duplicates": duplicates,
+                "filename_checked": filename,
+                "normalized_filename": base_filename
+            }), 200
+            
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            log_error(f"Error checking for duplicates: {exc}")
+            return jsonify({"error": str(exc)}), 500
+
     @app.route("/api/indexing/start", methods=["POST"])
     def start_indexing():
         """

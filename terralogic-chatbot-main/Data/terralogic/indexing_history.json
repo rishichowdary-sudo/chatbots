@@ -78,5 +78,35 @@
     "timestamp": "2025-12-17T21:18:46.254316",
     "indexing_mode": "PDF mode",
     "status": "completed"
+  },
+  {
+    "timestamp": "2025-12-19T00:11:43.114172",
+    "indexing_mode": "PDF mode",
+    "status": "started"
+  },
+  {
+    "timestamp": "2025-12-19T00:12:12.890307",
+    "indexing_mode": "PDF mode",
+    "status": "completed"
+  },
+  {
+    "timestamp": "2025-12-19T00:25:01.428699",
+    "indexing_mode": "PDF mode",
+    "status": "started"
+  },
+  {
+    "timestamp": "2025-12-19T00:25:29.696868",
+    "indexing_mode": "PDF mode",
+    "status": "completed"
+  },
+  {
+    "timestamp": "2025-12-19T00:25:53.035287",
+    "indexing_mode": "PDF mode",
+    "status": "started"
+  },
+  {
+    "timestamp": "2025-12-19T00:26:22.914151",
+    "indexing_mode": "PDF mode",
+    "status": "completed"
   }
 ]

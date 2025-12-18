@@ -75,23 +75,10 @@ def _save_key_store(path: str, data: Dict[str, Dict]) -> None:
     os.replace(tmp_path, path)
 
 
-def _save_indexing_history(client_id: str, indexing_mode: str, urls: str = None, sitemap: str = None, status: str = "unknown") -> None:
+def _save_indexing_history(client_id: str, indexing_mode: str, urls: str = None, sitemap: str = None, status: str = "unknown", client_configs=None) -> None:
     try:
-        # Get the client's data directory (same way as get_indexing_history endpoint)
-        # We need to load the client config directly since we're outside the register_admin_endpoints scope
-        import configparser
-        import os
-
-        # Load client properties
-        client_props_file = os.path.join(os.getcwd(), "client_properties.yaml")
-        if os.path.exists(client_props_file):
-            import yaml
-            with open(client_props_file, 'r') as f:
-                all_props = yaml.safe_load(f)
-                config = all_props.get(client_id, {})
-        else:
-            config = {}
-
+        # Get the client's data directory
+        config = client_configs.get(client_id, {}) if client_configs else {}
         root_dir = _client_root(config, client_id)
         client_dir = os.path.join(root_dir, client_id)
         os.makedirs(client_dir, exist_ok=True)
@@ -132,48 +119,6 @@ def _mask_key(key_value: str) -> str:
     if len(key_value) <= 8:
         return "*" * len(key_value)
     return f"{key_value[:4]}{'*' * (len(key_value) - 6)}{key_value[-2:]}"
-
-
-def _convert_office_to_pdf_bytes(file_bytes: bytes, ext: str, logger=None) -> Optional[bytes]:
-    """
-    Convert DOC/DOCX bytes to a simple PDF (text-only) for upload.
-    Returns PDF bytes on success, or None on failure.
-    """
-    ext = ext.lower()
-    text_content = ""
-
-    if ext == ".docx":
-        doc = DocxDocument(io.BytesIO(file_bytes))
-        text_content = "\n\n".join(p.text for p in doc.paragraphs)
-    elif ext == ".doc":
-        try:
-            import textract
-
-            with tempfile.NamedTemporaryFile(suffix=".doc", delete=True) as tmp:
-                tmp.write(file_bytes)
-                tmp.flush()
-                extracted = textract.process(tmp.name)
-                text_content = extracted.decode("utf-8", errors="ignore")
-        except Exception:
-            return None
-    else:
-        return None
-
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.set_font("Arial", size=12)
-    page_width = pdf.w - 2 * pdf.l_margin
-    safe_text_content = text_content.encode("latin-1", "replace").decode("latin-1")
-    try:
-        pdf.multi_cell(page_width, 6, safe_text_content)
-    except Exception as exc:
-        if "Not enough horizontal space to render a single character" in str(exc):
-            _log(logger, "warning", "Skipping text content during PDF conversion due to width error")
-            return None
-        raise
-
-    return pdf.output()
 
 
 def _apply_env(provider_key: str, entry: Dict, logger=None):
@@ -433,13 +378,7 @@ def register_admin_endpoints(app, client_configs, logger=None):
         # Iterate over paragraphs (assuming paragraphs are separated by double newlines or similar)
         # Or, just feed the entire text content as one block and let multi_cell handle wrapping
         safe_text_content = text_content.encode("latin-1", "replace").decode("latin-1")
-        try:
-            pdf.multi_cell(page_width, 6, safe_text_content) # Use page_width and reduced line height
-        except Exception as exc:
-            if "Not enough horizontal space to render a single character" in str(exc):
-                _log(logger, "warning", "Skipping text content during PDF conversion due to width error")
-                return None
-            raise
+        pdf.multi_cell(page_width, 6, safe_text_content) # Use page_width and reduced line height
 
         return pdf.output()
 
@@ -568,6 +507,69 @@ def register_admin_endpoints(app, client_configs, logger=None):
             log_error(f"Error deleting file: {exc}")
             return jsonify({"error": str(exc)}), 500
 
+    @app.route("/api/files/check-duplicate", methods=["POST"])
+    def check_duplicate_file():
+        """
+        Check if a file with the same name already exists.
+        Returns duplicate info if found.
+        
+        Note: DOC/DOCX files are converted to PDF on upload, so we normalize
+        the filename to .pdf before checking (e.g., document.docx -> document.pdf)
+        """
+        try:
+            data = request.json or {}
+            client_id = data.get("client_id")
+            filename = data.get("filename", "").strip()
+            
+            config = _validate_client(client_id)
+            root_dir = _client_root(config, client_id)
+            upload_dir = os.path.join(root_dir, client_id, "uploads")
+            
+            if not filename:
+                return jsonify({"error": "Filename is required"}), 400
+                
+            # Normalize filename: DOC/DOCX are stored as PDF
+            base_filename = filename.lower()
+            name_without_ext, ext = os.path.splitext(base_filename)
+            if ext in [".doc", ".docx"]:
+                base_filename = name_without_ext + ".pdf"
+            
+            duplicates = []
+            if os.path.exists(upload_dir):
+                for existing_file in os.listdir(upload_dir):
+                    # Files are stored as UUID_originalname.pdf
+                    parts = existing_file.split("_", 1)
+                    if len(parts) > 1:
+                        original_name = parts[1].lower()
+                        file_id = parts[0]
+                    else:
+                        original_name = existing_file.lower()
+                        file_id = None
+                    
+                    if original_name == base_filename:
+                        filepath = os.path.join(upload_dir, existing_file)
+                        duplicates.append({
+                            "document_id": file_id,
+                            "filename": existing_file,
+                            "original_name": parts[1] if len(parts) > 1 else existing_file,
+                            "uploaded_at": os.path.getctime(filepath),
+                            "size": os.path.getsize(filepath)
+                        })
+            
+            log_info(f"Duplicate check for {filename}: found {len(duplicates)} duplicate(s)")
+            return jsonify({
+                "is_duplicate": len(duplicates) > 0,
+                "duplicates": duplicates,
+                "filename_checked": filename,
+                "normalized_filename": base_filename
+            }), 200
+            
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            log_error(f"Error checking for duplicates: {exc}")
+            return jsonify({"error": str(exc)}), 500
+
     @app.route("/api/indexing/start", methods=["POST"])
     def start_indexing():
         """
@@ -580,6 +582,8 @@ def register_admin_endpoints(app, client_configs, logger=None):
             index_type = data.get("index_type", "all")
             urls = data.get("urls")
             sitemap = data.get("sitemap")
+
+            log_info(f"[DEBUG] Received indexing request: client_id={client_id}, index_type={index_type}, urls={urls}, sitemap={sitemap}")
             _validate_client(client_id)
 
             import subprocess
@@ -670,7 +674,7 @@ def register_admin_endpoints(app, client_configs, logger=None):
                             }
                         )
                         log_info(f"{indexing_mode} indexing completed for {client_id}: {job_id}")
-                        _save_indexing_history(client_id, indexing_mode_detail, urls, sitemap, "completed")
+                        _save_indexing_history(client_id, indexing_mode_detail, urls, sitemap, "completed", client_configs)
                     else:
                         raise RuntimeError(result.stderr or "Unknown error")
                 except Exception as exc_inner:
@@ -678,13 +682,13 @@ def register_admin_endpoints(app, client_configs, logger=None):
                         {"status": "failed", "message": f"Indexing failed: {exc_inner}", "progress": 100}
                     )
                     log_error(f"Indexing error for {client_id}: {exc_inner}")
-                    _save_indexing_history(client_id, indexing_mode_detail, urls, sitemap, "failed")
+                    _save_indexing_history(client_id, indexing_mode_detail, urls, sitemap, "failed", client_configs)
 
             threading.Thread(target=run_indexing, daemon=True).start()
             log_info(f"{indexing_mode} indexing started for {client_id}: {job_id}")
 
             # Save initial history entry
-            _save_indexing_history(client_id, indexing_mode_detail, urls, sitemap, "started")
+            _save_indexing_history(client_id, indexing_mode_detail, urls, sitemap, "started", client_configs)
 
             return jsonify({"message": "Indexing job started", "job_id": job_id, "status": "processing"}), 202
         except ValueError as exc:
