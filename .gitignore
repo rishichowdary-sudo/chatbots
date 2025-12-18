@@ -1,0 +1,17 @@
+# PDFs
+**/*.pdf
+**/uploads/
+
+# Vector stores & embeddings
+**/vectorstore.db/
+**/*.npz
+
+# Indexing data
+**/indexing_history.json
+
+# Secrets
+**/secrets/
+**/api_keys.json
+
+# Backup directories
+**/vectorstore.db_backup_*/
