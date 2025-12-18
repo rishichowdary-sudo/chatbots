@@ -24,6 +24,15 @@ from src.subgraphs.ServiceInformation_subgraph import ServiceInformationSubgraph
 from src.subgraphs.faq_llm_career import FAQLLMSubgraph
 from utils.logger_config import logger
 from utils.helper import load_client_properties, load_application_properties, load_prompts
+
+# Import shared admin API helper for loading model configuration
+try:
+    from shared_admin_api import load_model_for_provider
+except ImportError:
+    # Fallback if shared_admin_api is not available
+    def load_model_for_provider(root_dir, client_id, provider, default_model="gpt-4o-mini", logger=None):
+        return default_model
+
 # Load environment variables
 load_dotenv()
 
@@ -91,19 +100,23 @@ class MultiTenantGraph:
         # decision_llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=os.getenv("GOOGLE_API_KEY"))
         # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
+        client_properties = load_client_properties(self.client)
+
+        # Load model from API key configuration (defaults to gpt-4o-mini if not set)
+        root_dir = client_properties.get("ROOT_DIR", "Data")
+        model_name = load_model_for_provider(root_dir, self.client, "openai", default_model="gpt-4o-mini", logger=logger)
+
         # Initialize LLMs with error handling to allow startup without API keys
         try:
-            llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-            decision_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+            llm = ChatOpenAI(model=model_name, temperature=0)
+            decision_llm = ChatOpenAI(model=model_name, temperature=0)
             embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
         except Exception as e:
-            logger.warning(f"Failed to initialize LLMs for {client} - API key may not be configured: {e}")
+            logger.warning(f"Failed to initialize LLMs for {client} with model {model_name} - API key may not be configured: {e}")
             # Set to None to allow deferred initialization
             llm = None
             decision_llm = None
             embeddings = None
-
-        client_properties = load_client_properties(self.client)
 
         # Node creations - only if LLMs initialized successfully
         if load_nodes and llm is not None:

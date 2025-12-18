@@ -33,6 +33,14 @@ from src.subgraphs.careers_subgraph import CareerToolNode
 from utils.logger_config import logger
 import utils.helper as helper
 
+# Import shared admin API helper for loading model configuration
+try:
+    from shared_admin_api import load_model_for_provider
+except ImportError:
+    # Fallback if shared_admin_api is not available
+    def load_model_for_provider(root_dir, client_id, provider, default_model="gpt-4o-mini", logger=None):
+        return default_model
+
 # Load environment variables
 load_dotenv()
 
@@ -111,15 +119,18 @@ class MultiTenantGraph:
         self.state_in_memory = state_in_memory
         # decision_llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=os.getenv("GOOGLE_API_KEY"))
         # embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-        try: 
-            llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-            decision_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-            embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
-
-        
+        try:
             client_properties = helper.load_client_properties(self.client)
             self.state_db_path = helper.load_application_properties()["STATE_DB_PATH"]
             os.makedirs(os.path.join(self.state_db_path), exist_ok=True)
+
+            # Load model from API key configuration (defaults to gpt-4o-mini if not set)
+            root_dir = client_properties.get("ROOT_DIR", "Data")
+            model_name = load_model_for_provider(root_dir, self.client, "openai", default_model="gpt-4o-mini", logger=logger)
+
+            llm = ChatOpenAI(model=model_name, temperature=0)
+            decision_llm = ChatOpenAI(model=model_name, temperature=0)
+            embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
 
             # Node creations
             if load_nodes:
