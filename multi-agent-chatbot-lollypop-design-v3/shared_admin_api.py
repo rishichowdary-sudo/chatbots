@@ -387,6 +387,66 @@ def register_admin_endpoints(app, client_configs, logger=None):
             raise ValueError(f"Invalid client_id: {client_id}")
         return client_configs[client_id]
 
+    def _extract_text_from_file(file_bytes: bytes, ext: str) -> str:
+        """
+        Extract text content from a file for content comparison.
+        For DOC/DOCX, converts to PDF first then extracts (matches stored format).
+        Returns extracted text or empty string on failure.
+        """
+        import fitz  # PyMuPDF
+        ext = ext.lower()
+        text_content = ""
+        
+        try:
+            if ext == ".pdf":
+                # Direct PDF extraction
+                pdf_doc = fitz.open(stream=file_bytes, filetype="pdf")
+                for page in pdf_doc:
+                    text_content += page.get_text()
+                pdf_doc.close()
+            elif ext in [".docx", ".doc"]:
+                # Convert DOC/DOCX to PDF first, then extract from PDF
+                # This ensures we compare "apples to apples" with stored PDFs
+                pdf_bytes = _convert_office_to_pdf_bytes(file_bytes, ext)
+                if pdf_bytes:
+                    pdf_doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                    for page in pdf_doc:
+                        text_content += page.get_text()
+                    pdf_doc.close()
+                else:
+                    # Fallback to direct extraction if conversion fails
+                    if ext == ".docx":
+                        doc = DocxDocument(io.BytesIO(file_bytes))
+                        text_content = "\n".join(p.text for p in doc.paragraphs)
+                    elif ext == ".doc":
+                        import textract
+                        with tempfile.NamedTemporaryFile(suffix=".doc", delete=True) as tmp:
+                            tmp.write(file_bytes)
+                            tmp.flush()
+                            extracted = textract.process(tmp.name)
+                            text_content = extracted.decode("utf-8", errors="ignore")
+        except Exception as e:
+            _log(logger, "warning", f"Text extraction failed for {ext}: {e}")
+            return ""
+        
+        return text_content.strip()
+
+    def _get_content_hash(text: str) -> str:
+        """
+        Generate MD5 hash of normalized text content for comparison.
+        Normalizes text to handle DOC→PDF conversion differences.
+        """
+        import hashlib
+        import re
+        
+        # Normalize text for consistent comparison
+        normalized = text.lower()                    # Lowercase
+        normalized = re.sub(r'\s+', ' ', normalized) # Collapse whitespace
+        normalized = normalized.strip()              # Trim ends
+        
+        return hashlib.md5(normalized.encode('utf-8')).hexdigest()
+
+
     @app.route("/api/files/upload", methods=["POST"])
     def upload_file():
         try:
@@ -510,16 +570,30 @@ def register_admin_endpoints(app, client_configs, logger=None):
     @app.route("/api/files/check-duplicate", methods=["POST"])
     def check_duplicate_file():
         """
-        Check if a file with the same name already exists.
-        Returns duplicate info if found.
+        Check if a file with the same name already exists and compare content.
+        Returns duplicate info including whether content is same or different.
         
-        Note: DOC/DOCX files are converted to PDF on upload, so we normalize
-        the filename to .pdf before checking (e.g., document.docx -> document.pdf)
+        Accepts either:
+        - JSON: {"client_id": "...", "filename": "..."} (filename check only)
+        - Form data: client_id, file (with file content for comparison)
         """
         try:
-            data = request.json or {}
-            client_id = data.get("client_id")
-            filename = data.get("filename", "").strip()
+            # Handle both JSON and form data
+            if request.content_type and 'multipart/form-data' in request.content_type:
+                client_id = request.form.get("client_id")
+                upload = request.files.get("file")
+                if upload:
+                    filename = upload.filename
+                    uploaded_bytes = upload.read()
+                    upload.seek(0)  # Reset for potential later use
+                else:
+                    filename = request.form.get("filename", "").strip()
+                    uploaded_bytes = None
+            else:
+                data = request.json or {}
+                client_id = data.get("client_id")
+                filename = data.get("filename", "").strip()
+                uploaded_bytes = None
             
             config = _validate_client(client_id)
             root_dir = _client_root(config, client_id)
@@ -527,12 +601,22 @@ def register_admin_endpoints(app, client_configs, logger=None):
             
             if not filename:
                 return jsonify({"error": "Filename is required"}), 400
-                
+            
+            # Get uploaded file extension
+            _, uploaded_ext = os.path.splitext(filename.lower())
+            
             # Normalize filename: DOC/DOCX are stored as PDF
             base_filename = filename.lower()
             name_without_ext, ext = os.path.splitext(base_filename)
             if ext in [".doc", ".docx"]:
                 base_filename = name_without_ext + ".pdf"
+            
+            # Extract text and hash from uploaded file (if provided)
+            uploaded_hash = None
+            if uploaded_bytes:
+                uploaded_text = _extract_text_from_file(uploaded_bytes, uploaded_ext)
+                if uploaded_text:
+                    uploaded_hash = _get_content_hash(uploaded_text)
             
             duplicates = []
             if os.path.exists(upload_dir):
@@ -548,12 +632,29 @@ def register_admin_endpoints(app, client_configs, logger=None):
                     
                     if original_name == base_filename:
                         filepath = os.path.join(upload_dir, existing_file)
+                        
+                        # Compare content if we have uploaded file bytes
+                        is_same_content = None
+                        existing_hash = None
+                        if uploaded_hash:
+                            try:
+                                with open(filepath, "rb") as f:
+                                    existing_bytes = f.read()
+                                existing_text = _extract_text_from_file(existing_bytes, ".pdf")
+                                if existing_text:
+                                    existing_hash = _get_content_hash(existing_text)
+                                    is_same_content = (uploaded_hash == existing_hash)
+                            except Exception as e:
+                                log_error(f"Content comparison failed: {e}")
+                        
                         duplicates.append({
                             "document_id": file_id,
                             "filename": existing_file,
                             "original_name": parts[1] if len(parts) > 1 else existing_file,
                             "uploaded_at": os.path.getctime(filepath),
-                            "size": os.path.getsize(filepath)
+                            "size": os.path.getsize(filepath),
+                            "is_same_content": is_same_content,
+                            "existing_hash": existing_hash
                         })
             
             log_info(f"Duplicate check for {filename}: found {len(duplicates)} duplicate(s)")
@@ -561,7 +662,8 @@ def register_admin_endpoints(app, client_configs, logger=None):
                 "is_duplicate": len(duplicates) > 0,
                 "duplicates": duplicates,
                 "filename_checked": filename,
-                "normalized_filename": base_filename
+                "normalized_filename": base_filename,
+                "uploaded_hash": uploaded_hash
             }), 200
             
         except ValueError as exc:
