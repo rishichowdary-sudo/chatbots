@@ -47,7 +47,12 @@ def _log(logger, level: str, message: str):
 
 
 def _client_root(config: Dict, client_id: str) -> str:
-    return config.get("ROOT_DIR", "Data")
+    root_dir = config.get("ROOT_DIR", "Data")
+    # Convert relative paths to absolute paths based on the script location
+    if not os.path.isabs(root_dir):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        root_dir = os.path.join(script_dir, root_dir)
+    return root_dir
 
 
 def _ensure_secrets_path(root_dir: str, client_id: str) -> str:
@@ -449,6 +454,7 @@ def register_admin_endpoints(app, client_configs, logger=None):
 
     @app.route("/api/files/upload", methods=["POST"])
     def upload_file():
+        filepath = None  # Track filepath for cleanup on failure
         try:
             client_id = request.form.get("client_id")
             config = _validate_client(client_id)
@@ -505,8 +511,21 @@ def register_admin_endpoints(app, client_configs, logger=None):
                 201,
             )
         except ValueError as exc:
+            # Cleanup partial file on validation error
+            if filepath and os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
             return jsonify({"error": str(exc)}), 400
         except Exception as exc:
+            # Cleanup partial file on any error
+            if filepath and os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                    log_info(f"Cleaned up partial file: {filepath}")
+                except Exception as cleanup_err:
+                    log_error(f"Failed to cleanup partial file {filepath}: {cleanup_err}")
             log_error(f"Error uploading file: {exc}")
             return jsonify({"error": str(exc)}), 500
 
@@ -565,7 +584,7 @@ def register_admin_endpoints(app, client_configs, logger=None):
                     gc.collect()
                     
                     # Retry logic for Windows file locking
-                    max_retries = 3
+                    max_retries = 5
                     for attempt in range(max_retries):
                         try:
                             os.remove(filepath)
@@ -573,7 +592,7 @@ def register_admin_endpoints(app, client_configs, logger=None):
                             return jsonify({"message": "File deleted successfully"}), 200
                         except PermissionError as e:
                             if attempt < max_retries - 1:
-                                time.sleep(0.5)  # Wait and retry
+                                time.sleep(1.0)  # Wait longer and retry
                                 gc.collect()
                             else:
                                 log_error(f"Permission denied after {max_retries} attempts: {filepath}")
