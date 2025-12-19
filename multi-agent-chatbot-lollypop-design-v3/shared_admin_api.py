@@ -569,40 +569,65 @@ def register_admin_endpoints(app, client_configs, logger=None):
         
         try:
             client_id = request.args.get("client_id")
+            log_info(f"[DELETE] Starting delete for document_id={document_id}, client_id={client_id}")
+            
             config = _validate_client(client_id)
             root_dir = _client_root(config, client_id)
             upload_dir = os.path.join(root_dir, client_id, "uploads")
+            
+            log_info(f"[DELETE] Looking in upload_dir={upload_dir}")
 
             if not os.path.exists(upload_dir):
+                log_info(f"[DELETE] Upload dir does not exist: {upload_dir}")
                 return jsonify({"error": "No uploads found"}), 404
 
-            for filename in os.listdir(upload_dir):
+            files_found = os.listdir(upload_dir)
+            log_info(f"[DELETE] Files in folder: {files_found}")
+            
+            for filename in files_found:
                 if filename.startswith(f"{document_id}_"):
                     filepath = os.path.join(upload_dir, filename)
+                    log_info(f"[DELETE] Found matching file: {filepath}")
                     
                     # Force garbage collection to release any file handles
                     gc.collect()
                     
                     # Retry logic for Windows file locking
                     max_retries = 5
+                    last_error = None
                     for attempt in range(max_retries):
                         try:
                             os.remove(filepath)
-                            log_info(f"Deleted file for {client_id}: {filename}")
+                            # Verify file is actually deleted
+                            if os.path.exists(filepath):
+                                log_error(f"[DELETE] os.remove succeeded but file still exists: {filepath}")
+                                raise Exception("File still exists after os.remove")
+                            log_info(f"[DELETE] Successfully deleted file for {client_id}: {filename}")
                             return jsonify({"message": "File deleted successfully"}), 200
                         except PermissionError as e:
+                            last_error = e
+                            log_info(f"[DELETE] Attempt {attempt+1}/{max_retries} failed with PermissionError: {e}")
                             if attempt < max_retries - 1:
                                 time.sleep(1.0)  # Wait longer and retry
                                 gc.collect()
-                            else:
-                                log_error(f"Permission denied after {max_retries} attempts: {filepath}")
-                                return jsonify({"error": f"File is locked, please try again: {str(e)}"}), 500
+                        except Exception as e:
+                            last_error = e
+                            log_error(f"[DELETE] Attempt {attempt+1}/{max_retries} failed with error: {e}")
+                            if attempt < max_retries - 1:
+                                time.sleep(1.0)
+                                gc.collect()
+                    
+                    # All retries failed
+                    log_error(f"[DELETE] All {max_retries} attempts failed for {filepath}: {last_error}")
+                    return jsonify({"error": f"Failed to delete file after {max_retries} attempts: {str(last_error)}"}), 500
 
+            log_info(f"[DELETE] No file found matching document_id={document_id}")
             return jsonify({"error": "File not found"}), 404
         except ValueError as exc:
+            log_error(f"[DELETE] ValueError: {exc}")
             return jsonify({"error": str(exc)}), 400
         except Exception as exc:
-            log_error(f"Error deleting file: {exc}")
+            log_error(f"[DELETE] Unexpected error: {exc}")
             return jsonify({"error": str(exc)}), 500
 
     @app.route("/api/files/check-duplicate", methods=["POST"])
@@ -722,8 +747,9 @@ def register_admin_endpoints(app, client_configs, logger=None):
             index_type = data.get("index_type", "all")
             urls = data.get("urls")
             sitemap = data.get("sitemap")
+            filenames = data.get("filenames")  # List of filenames for selective indexing
 
-            log_info(f"[DEBUG] Received indexing request: client_id={client_id}, index_type={index_type}, urls={urls}, sitemap={sitemap}")
+            log_info(f"[DEBUG] Received indexing request: client_id={client_id}, index_type={index_type}, urls={urls}, sitemap={sitemap}, filenames={filenames}")
             _validate_client(client_id)
 
             import subprocess
@@ -743,8 +769,12 @@ def register_admin_endpoints(app, client_configs, logger=None):
                 indexing_mode = "Full Website"
                 indexing_mode_detail = "Full website mode"
             elif index_type == "pdf":
-                indexing_mode = "PDF"
-                indexing_mode_detail = "PDF mode"
+                if filenames:
+                    indexing_mode = f"Specific PDFs ({len(filenames)} files)"
+                    indexing_mode_detail = f"PDF mode: {len(filenames)} specific files"
+                else:
+                    indexing_mode = "PDF"
+                    indexing_mode_detail = "PDF mode"
             else:
                 indexing_mode = "Full"
                 indexing_mode_detail = "Full (default) mode"
@@ -785,7 +815,13 @@ def register_admin_endpoints(app, client_configs, logger=None):
                     elif index_type == "pdf":
                         # PDF Only: Index only PDFs, skip website
                         cmd = [python_cmd, setup_path, "-n", client_id, "-p"]
-                        log_info(f"[Index] PDF mode for {client_id} (PDFs only, no website)")
+                        if filenames and isinstance(filenames, list) and len(filenames) > 0:
+                            # Add filter for specific files
+                            file_list_str = ",".join(filenames)
+                            cmd.extend(["-f", file_list_str])
+                            log_info(f"[Index] PDF mode for {client_id} (Specific files: {filenames})")
+                        else:
+                            log_info(f"[Index] PDF mode for {client_id} (All PDFs)")
                     else:
                         # All/Default: Index both website + PDFs
                         cmd = [python_cmd, setup_path, "-n", client_id]

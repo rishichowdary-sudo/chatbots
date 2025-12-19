@@ -27,13 +27,16 @@ parser.add_argument('-w', '--website', action='store_true', help='Index website 
 parser.add_argument('-p', '--pdf', action='store_true', help='Index PDFs only (skip website)')
 parser.add_argument('-u', '--urls', type=str, help='Comma-separated list of URLs to index')
 parser.add_argument('-s', '--sitemap', type=str, help='Sitemap XML URL to extract and index URLs from')
+parser.add_argument('-f', '--filenames', type=str, help='Comma-separated list of filenames to index (PDF mode only)')
 args = parser.parse_args()
 client = args.name
 index_website_only = args.website
 index_pdf_only = args.pdf
 custom_urls = args.urls.split(',') if args.urls else None
 sitemap_url = args.sitemap
-print(f"Client: {client}, Website Only: {index_website_only}, PDF Only: {index_pdf_only}, Custom URLs: {custom_urls}, Sitemap: {sitemap_url}")
+filter_filenames = [f.strip().lower() for f in args.filenames.split(',')] if args.filenames else None
+
+print(f"Client: {client}, Website Only: {index_website_only}, PDF Only: {index_pdf_only}, Custom URLs: {custom_urls}, Sitemap: {sitemap_url}, Filter Filenames: {filter_filenames}")
 
 # Load properties from YAML file
 properties_file = os.path.join(os.getcwd(), "client_properties.yaml")
@@ -71,7 +74,7 @@ os.makedirs(vectorstore_path, exist_ok=True)
 os.makedirs(uploads_dir, exist_ok=True)
 
 
-def load_pdf_documents(primary_pdf_path: str, uploads_directory: str):
+def load_pdf_documents(primary_pdf_path: str, uploads_directory: str, filter_names: list = None):
     """Load the base FAQ PDF and any additional PDFs uploaded via the Admin Portal."""
     import time
     documents = []
@@ -98,10 +101,28 @@ def load_pdf_documents(primary_pdf_path: str, uploads_directory: str):
                     return []
         return []
 
-    documents.extend(load_pdf(primary_pdf_path))
+    # Only load primary PDF if no filter is applied (full re-index) OR if explicitly requested?
+    # For now: If filter is applied, ONLY load the filtered files from uploads. Skip primary PDF.
+    if not filter_names:
+        documents.extend(load_pdf(primary_pdf_path))
 
     if os.path.isdir(uploads_directory):
         for filename in os.listdir(uploads_directory):
+            # Apply filter if provided
+            if filter_names:
+                # Check if current filename contains any of the filter names
+                # (Simple substring match since filenames on disk have UUID prefix)
+                # e.g. filter="marvel.pdf", on disk="uuid_marvel.pdf" -> match
+                is_match = False
+                current_lower = filename.lower()
+                for name in filter_names:
+                    if name in current_lower:
+                        is_match = True
+                        break
+                
+                if not is_match:
+                    continue  # Skip this file if it doesn't match filter
+
             file_path = os.path.join(uploads_directory, filename)
             loaded_docs = load_pdf(file_path)
             if loaded_docs:  # Only extend if we successfully loaded docs
@@ -189,7 +210,7 @@ def load_documents_from_urls(urls: list, extractor=None) -> list:
     print(f"Successfully loaded {len(documents)} documents from {total} URLs")
     return documents
 
-def create_vectorstore(mode=None, depth=100, website_only=False, pdf_only=False, use_sitemap=False):
+def create_vectorstore(mode=None, depth=100, website_only=False, pdf_only=False, use_sitemap=False, filter_filenames=None):
     """
     if block: if no vectorstore present, creates vectorstore with both urlloader and faq document
     else block: if vectorstore present, loads from disk and merges faw vectorstore with it
@@ -197,6 +218,7 @@ def create_vectorstore(mode=None, depth=100, website_only=False, pdf_only=False,
     website_only: If True, only index website content (skip PDFs)
     pdf_only: If True, only index PDFs (skip website)
     use_sitemap: If True, load URLs from sitemap instead of recursive crawling
+    filter_filenames: List of filenames to filter by (PDF mode only)
     """
 
     # Create Vectorstore for RAG agent
@@ -280,7 +302,7 @@ def create_vectorstore(mode=None, depth=100, website_only=False, pdf_only=False,
             # PDF-only mode: Load PDFs, no website
             print("PDF-only mode: Loading PDFs, skipping website")
             pdf_path = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
-            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir)
+            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir, filter_names=filter_filenames)
             total_docs_list = pdf_docs_list
         elif website_only:
             # Website-only mode: Load website, no PDFs
@@ -290,7 +312,7 @@ def create_vectorstore(mode=None, depth=100, website_only=False, pdf_only=False,
             # Default mode: Load both website and PDFs
             print("Full mode: Loading both website and PDFs")
             pdf_path = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
-            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir)
+            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir, filter_names=filter_filenames)
             total_docs_list = text_docs_list + pdf_docs_list
 
         # Check if sitemap batching already created vectorstore
@@ -404,11 +426,15 @@ def create_vectorstore(mode=None, depth=100, website_only=False, pdf_only=False,
         else:
             # PDF mode: Load existing vectorstore and merge PDFs
             print("PDF mode: Loading existing vectorstore and adding PDFs")
+            
+            if filter_filenames:
+                print(f"Partially indexing specific files: {filter_filenames}")
+            
             vectorstore = FAISS.load_local(vectorstore_path, embed_model, allow_dangerous_deserialization=True)
 
             # load faq document(s)
             pdf_path = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
-            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir)
+            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir, filter_names=filter_filenames)
             print(f"Loaded {len(pdf_docs_list)} PDF documents (pages)")
 
             if len(pdf_docs_list) > 0:
@@ -471,7 +497,7 @@ if __name__ == "__main__":
         print("Created FAQ Embeddings for LLM-free journey ---------------------")
 
     # create vectorstore for RAG
-    create_vectorstore(depth=1, website_only=index_website_only, pdf_only=index_pdf_only, use_sitemap=use_sitemap_mode)
+    create_vectorstore(depth=1, website_only=index_website_only, pdf_only=index_pdf_only, use_sitemap=use_sitemap_mode, filter_filenames=filter_filenames)
 
     if use_sitemap_mode:
         print("Created Vectorstore from sitemap URLs ----------------")
@@ -480,5 +506,9 @@ if __name__ == "__main__":
         print("Created Vectorstore for website content only ----------------")
         logger.info("Setup complete - Re-indexed website content")
     else:
-        print("Created Vectorstore for RAG agent (PDFs + Website) ----------------")
-        logger.info("Setup complete - Created Knowledge store with FAQs and Website data")
+        if filter_filenames:
+            print(f"Updated Vectorstore with {len(filter_filenames)} specific files ----------------")
+            logger.info(f"Setup complete - Indexed {len(filter_filenames)} specific files")
+        else:
+            print("Created Vectorstore for RAG agent (PDFs + Website) ----------------")
+            logger.info("Setup complete - Created Knowledge store with FAQs and Website data")
