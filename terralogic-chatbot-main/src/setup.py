@@ -73,12 +73,29 @@ os.makedirs(uploads_dir, exist_ok=True)
 
 def load_pdf_documents(primary_pdf_path: str, uploads_directory: str):
     """Load the base FAQ PDF and any additional PDFs uploaded via the Admin Portal."""
+    import time
     documents = []
 
-    def load_pdf(path: str):
-        if os.path.exists(path) and path.lower().endswith(".pdf"):
-            loader = PyMuPDFLoader(path)
-            return loader.load()
+    def load_pdf(path: str, retry_count=3):
+        """Load PDF with retry logic for file locking issues"""
+        if not (os.path.exists(path) and path.lower().endswith(".pdf")):
+            return []
+
+        for attempt in range(retry_count):
+            try:
+                loader = PyMuPDFLoader(path)
+                docs = loader.load()
+                # Explicitly close file handles if possible
+                if hasattr(loader, 'close'):
+                    loader.close()
+                return docs
+            except (PermissionError, OSError) as e:
+                if attempt < retry_count - 1:
+                    print(f"[WARNING] File locked: {path}, retrying in 2 seconds... (attempt {attempt + 1}/{retry_count})")
+                    time.sleep(2)
+                else:
+                    print(f"[ERROR] Failed to load {path} after {retry_count} attempts: {e}")
+                    return []
         return []
 
     documents.extend(load_pdf(primary_pdf_path))
@@ -86,7 +103,9 @@ def load_pdf_documents(primary_pdf_path: str, uploads_directory: str):
     if os.path.isdir(uploads_directory):
         for filename in os.listdir(uploads_directory):
             file_path = os.path.join(uploads_directory, filename)
-            documents.extend(load_pdf(file_path))
+            loaded_docs = load_pdf(file_path)
+            if loaded_docs:  # Only extend if we successfully loaded docs
+                documents.extend(loaded_docs)
 
     return documents
 

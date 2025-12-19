@@ -545,6 +545,9 @@ def register_admin_endpoints(app, client_configs, logger=None):
 
     @app.route("/api/files/<document_id>", methods=["DELETE"])
     def delete_file(document_id):
+        import gc
+        import time
+        
         try:
             client_id = request.args.get("client_id")
             config = _validate_client(client_id)
@@ -556,9 +559,25 @@ def register_admin_endpoints(app, client_configs, logger=None):
 
             for filename in os.listdir(upload_dir):
                 if filename.startswith(f"{document_id}_"):
-                    os.remove(os.path.join(upload_dir, filename))
-                    log_info(f"Deleted file for {client_id}: {filename}")
-                    return jsonify({"message": "File deleted successfully"}), 200
+                    filepath = os.path.join(upload_dir, filename)
+                    
+                    # Force garbage collection to release any file handles
+                    gc.collect()
+                    
+                    # Retry logic for Windows file locking
+                    max_retries = 3
+                    for attempt in range(max_retries):
+                        try:
+                            os.remove(filepath)
+                            log_info(f"Deleted file for {client_id}: {filename}")
+                            return jsonify({"message": "File deleted successfully"}), 200
+                        except PermissionError as e:
+                            if attempt < max_retries - 1:
+                                time.sleep(0.5)  # Wait and retry
+                                gc.collect()
+                            else:
+                                log_error(f"Permission denied after {max_retries} attempts: {filepath}")
+                                return jsonify({"error": f"File is locked, please try again: {str(e)}"}), 500
 
             return jsonify({"error": "File not found"}), 404
         except ValueError as exc:
