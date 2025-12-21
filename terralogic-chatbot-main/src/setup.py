@@ -27,13 +27,14 @@ parser.add_argument('-w', '--website', action='store_true', help='Index website 
 parser.add_argument('-p', '--pdf', action='store_true', help='Index PDFs only (skip website)')
 parser.add_argument('-u', '--urls', type=str, help='Comma-separated list of URLs to index')
 parser.add_argument('-s', '--sitemap', type=str, help='Sitemap XML URL to extract and index URLs from')
+parser.add_argument('-f', '--filenames', type=str, help='Comma-separated list of filenames to index (PDF mode only)')
 args = parser.parse_args()
 client = args.name
 index_website_only = args.website
 index_pdf_only = args.pdf
 custom_urls = args.urls.split(',') if args.urls else None
 sitemap_url = args.sitemap
-print(f"Client: {client}, Website Only: {index_website_only}, PDF Only: {index_pdf_only}, Custom URLs: {custom_urls}, Sitemap: {sitemap_url}")
+filter_filenames = [f.strip().lower() for f in args.filenames.split(',')] if args.filenames else None
 
 # Load properties from YAML file
 properties_file = os.path.join(os.getcwd(), "client_properties.yaml")
@@ -71,7 +72,7 @@ os.makedirs(vectorstore_path, exist_ok=True)
 os.makedirs(uploads_dir, exist_ok=True)
 
 
-def load_pdf_documents(primary_pdf_path: str, uploads_directory: str):
+def load_pdf_documents(primary_pdf_path: str, uploads_directory: str, filter_filenames=None):
     """Load the base FAQ PDF and any additional PDFs uploaded via the Admin Portal."""
     import time
     documents = []
@@ -102,6 +103,16 @@ def load_pdf_documents(primary_pdf_path: str, uploads_directory: str):
 
     if os.path.isdir(uploads_directory):
         for filename in os.listdir(uploads_directory):
+            # Apply filename filter if provided
+            if filter_filenames:
+                 is_match = False
+                 for f_name in filter_filenames:
+                     if f_name in filename.lower():
+                         is_match = True
+                         break
+                 if not is_match:
+                     continue
+
             file_path = os.path.join(uploads_directory, filename)
             loaded_docs = load_pdf(file_path)
             if loaded_docs:  # Only extend if we successfully loaded docs
@@ -280,7 +291,7 @@ def create_vectorstore(mode=None, depth=100, website_only=False, pdf_only=False,
             # PDF-only mode: Load PDFs, no website
             print("PDF-only mode: Loading PDFs, skipping website")
             pdf_path = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
-            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir)
+            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir, filter_filenames=filter_filenames)
             total_docs_list = pdf_docs_list
         elif website_only:
             # Website-only mode: Load website, no PDFs
@@ -290,7 +301,7 @@ def create_vectorstore(mode=None, depth=100, website_only=False, pdf_only=False,
             # Default mode: Load both website and PDFs
             print("Full mode: Loading both website and PDFs")
             pdf_path = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
-            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir)
+            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir, filter_filenames=filter_filenames)
             total_docs_list = text_docs_list + pdf_docs_list
 
         # Check if sitemap batching already created vectorstore
@@ -408,7 +419,7 @@ def create_vectorstore(mode=None, depth=100, website_only=False, pdf_only=False,
 
             # load faq document(s)
             pdf_path = os.path.join(ROOT_DIR, CLIENT_NAME, PDF_FILE)
-            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir)
+            pdf_docs_list = load_pdf_documents(pdf_path, uploads_dir, filter_filenames=filter_filenames)
             print(f"Loaded {len(pdf_docs_list)} PDF documents (pages)")
 
             if len(pdf_docs_list) > 0:
