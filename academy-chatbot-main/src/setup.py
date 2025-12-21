@@ -470,16 +470,19 @@ if __name__ == "__main__":
         faq_json_path = os.path.join(ROOT_DIR, CLIENT_NAME, FAQ_JSON_FILE)
         
         # Force regeneration of FAQ data to include new uploads
-        if os.path.exists(faq_json_path):
-            os.remove(faq_json_path)
-            print(f"Removed existing FAQ JSON: {faq_json_path}")
-        if os.path.exists(embeddings_path):
-            os.remove(embeddings_path)
-            print(f"Removed existing Embeddings: {embeddings_path}")
+        # Only clear full database if this is a FULL index run (no filter)
+        if not filter_filenames:
+            if os.path.exists(faq_json_path):
+                os.remove(faq_json_path)
+                print(f"Removed existing FAQ JSON: {faq_json_path}")
+            if os.path.exists(embeddings_path):
+                os.remove(embeddings_path)
+                print(f"Removed existing Embeddings: {embeddings_path}")
 
-        search_obj = SearchNode(pdf_path, embeddings_path, faq_json_path, uploads_dir)
+        search_obj = SearchNode(pdf_path, embeddings_path, faq_json_path, uploads_dir, filter_filenames=filter_filenames)
         search_obj.load_faq_data()
-        print("Created FAQ Embeddings for LLM-free journey ---------------------")
+        
+    print("Created FAQ Embeddings for LLM-free journey ---------------------")
 
     # create vectorstore for RAG
     create_vectorstore(depth=1, website_only=index_website_only, pdf_only=index_pdf_only, use_sitemap=use_sitemap_mode)

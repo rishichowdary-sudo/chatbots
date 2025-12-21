@@ -12,12 +12,13 @@ from utils.logger_config import logger
 
 class SearchNode:
     
-    def __init__(self, pdf_path, embeddings_path, faq_json_path, uploads_dir=None) -> None:
+    def __init__(self, pdf_path, embeddings_path, faq_json_path, uploads_dir=None, filter_filenames=None) -> None:
         self.embed_model = SentenceTransformer('all-MiniLM-L6-v2')
         self.pdf_path = pdf_path
         self.embeddings_path = embeddings_path
         self.faq_json_path = faq_json_path
         self.uploads_dir = uploads_dir
+        self.filter_filenames = filter_filenames
         self.faqs = None
         self.faq_embeddings = None
         
@@ -33,8 +34,8 @@ class SearchNode:
         """
         pages = []
 
-        # Base PDF
-        if os.path.exists(self.pdf_path):
+        # Load base PDF (Only if NO filter is applied)
+        if not self.filter_filenames and os.path.exists(self.pdf_path):
             try:
                 doc = fitz.open(self.pdf_path)
                 pages.extend([page.get_text() for page in doc])
@@ -46,6 +47,17 @@ class SearchNode:
             for filename in os.listdir(self.uploads_dir):
                 if not filename.lower().endswith(".pdf"):
                     continue
+
+                # Apply filter if provided
+                if self.filter_filenames:
+                     is_match = False
+                     for f_name in self.filter_filenames:
+                         if f_name in filename.lower():
+                             is_match = True
+                             break
+                     if not is_match:
+                         continue
+
                 file_path = os.path.join(self.uploads_dir, filename)
                 try:
                     doc = fitz.open(file_path)
@@ -162,6 +174,7 @@ class SearchNode:
         """
         Load FAQs and embeddings from precomputed files if available.
         Otherwise, extract from PDF and compute embeddings.
+        Supports Incremental Update.
         """
 
         # Ensure target directories exist before reading/writing
@@ -172,26 +185,72 @@ class SearchNode:
         if emb_dir:
             os.makedirs(emb_dir, exist_ok=True)
 
-        if os.path.exists(self.embeddings_path) and os.path.exists(self.faq_json_path):
+        def create_embeddings(faqs):
+            faq_questions = [faq["question"] for faq in faqs]
+            if not faq_questions: return np.array([])
+            faq_embeddings = self.embed_sentences(faq_questions)           
+            return faq_embeddings
+
+        def create_faqs_from_source():
+            pdf_text = self.extract_text_from_pdf_pymupdf()
+            faqs = self.split_pdf_text_into_faqs(pdf_text)
+            return faqs
+
+        # Case 1: Incremental Update (Filter provided + Existing data)
+        if self.filter_filenames and os.path.exists(self.faq_json_path) and os.path.exists(self.embeddings_path):
+            print(f"Incremental Update for: {self.filter_filenames}")
+            
+            # Load existing
+            with open(self.faq_json_path, 'r', encoding='utf-8') as f:
+                self.faqs = json.load(f)
+            
+            data = np.load(self.embeddings_path)
+            self.faq_embeddings = data['faq_embeddings']
+            
+            # Extract NEW content
+            # Note: extract_text_from_pdf_pymupdf already handles filtering via self.filter_filenames
+            new_faqs = create_faqs_from_source()
+            print(f"Extracted {len(new_faqs)} new FAQs from uploaded file(s).")
+            
+            if new_faqs:
+                # Compute NEW embeddings
+                print("Computing embeddings for new FAQs...")
+                new_embeddings = create_embeddings(new_faqs)
+                
+                # Merge
+                self.faqs.extend(new_faqs)
+                if self.faq_embeddings.size > 0 and new_embeddings.size > 0:
+                    self.faq_embeddings = np.concatenate((self.faq_embeddings, new_embeddings), axis=0)
+                elif new_embeddings.size > 0:
+                    self.faq_embeddings = new_embeddings
+                
+                # Save Updated
+                with open(self.faq_json_path, 'w', encoding='utf-8') as f:
+                    json.dump(self.faqs, f, indent=4, ensure_ascii=False)
+                np.savez(self.embeddings_path, faq_embeddings=self.faq_embeddings)
+                print("Merged and saved updated FAQs and embeddings.")
+            else:
+                print("No new FAQs found in uploaded file(s).")
+
+        # Case 2: Full Load or Regeneration
+        elif os.path.exists(self.embeddings_path) and os.path.exists(self.faq_json_path):
             # Load precomputed FAQs and embeddings
-            with open(self.faq_json_path, 'r') as f:
+            with open(self.faq_json_path, 'r', encoding='utf-8') as f:
                 self.faqs = json.load(f)
             data = np.load(self.embeddings_path)
             self.faq_embeddings = data['faq_embeddings']
             print("Loaded precomputed FAQs and embeddings.")
+        
         else:
-            # Extract text from PDF and compute embeddings
-            print("Extracting text from PDF...")
-            pdf_text = self.extract_text_from_pdf_pymupdf()
-            self.faqs = self.split_pdf_text_into_faqs(pdf_text)
+            # Full Clean Extract
+            print("Extracting text from PDF (Full Build)...")
+            self.faqs = create_faqs_from_source()
             
-            with open(self.faq_json_path, 'w') as f:
-                json.dump(self.faqs, f, indent=4)
+            with open(self.faq_json_path, 'w', encoding='utf-8') as f:
+                json.dump(self.faqs, f, indent=4, ensure_ascii=False)
             
             print("Computing embeddings...")
-            faq_questions = [faq["question"] for faq in self.faqs]
-            self.faq_embeddings = self.embed_sentences(faq_questions)
-            
+            self.faq_embeddings = create_embeddings(self.faqs)
             np.savez(self.embeddings_path, faq_embeddings=self.faq_embeddings)
             print("FAQs and embeddings saved.")
 
